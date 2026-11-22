@@ -1,0 +1,34 @@
+# ---- 개인 · 로컬 전용
+CLAUDE.md
+.claude/
+~$*
+*.tmp
+
+# ---- 수집 데이터 전부 (용량이 큼 — 시범은 README의 명령으로 다시 만들고, 최종 데이터는 Hugging Face로 공유)
+data/
+
+# ---- 확인용 평가 결과 (이름 끝을 _test로)
+evaluation/eval/*_test/
+
+# ---- 실행할 때마다 생기는 파일 (내 PC 경로가 들어감)
+environment/env/sumo/banpo/
+environment/env/sumo/.banpo_build_*/
+environment/road/build/
+
+# ---- 주행 영상 (record_video.py 출력, 용량 큼 — 공유는 드라이브로)
+environment/road/videos/
+
+# ---- 지난 자료 보관 (현재 작업의 근거 아님)
+_archive/
+
+# ---- Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ---- 학습 로그 (TensorBoard)
+results/*/tb/
+
+# 각 PC 실행 로그 · 받은 보고 원본 (결과는 docs/ 기록으로 옮김)
+logs/

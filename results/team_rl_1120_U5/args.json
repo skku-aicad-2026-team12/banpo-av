@@ -1,0 +1,22 @@
+{
+ "cmd": "rl",
+ "init": "results/team_bc_1119_r8b4n/model.pt",
+ "envs": 7,
+ "timesteps": 600000,
+ "lr": 5e-05,
+ "n_steps": 8176,
+ "critic_warmup": 8,
+ "anchor_coef": 10.0,
+ "teacher_lr": 0.0002,
+ "teacher_epochs": 1,
+ "teacher_brake_weight": 4.0,
+ "safety": false,
+ "depart_lane": "random",
+ "depart_speed": "limit",
+ "window": 100,
+ "log_every": 1,
+ "save_every": 6,
+ "seed": 0,
+ "device": "cpu",
+ "name": "team_rl_1120_U5"
+}
