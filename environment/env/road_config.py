@@ -243,7 +243,7 @@ TRAFFIC = {
     "buses": _bus_lines(_BUS_LINES),
     # depart_lane · depart_speed는 수업 원본 직선 도로(ROAD["network"] 없음)에서만 쓴다.
     # 반포 도로망 배경차는 environment/env/road_builder.py _build_network()에서 departLane="best" · departSpeed="max"로 고정
-    # (경로에 맞는 차로로 투입 — 12팀 11/12, docs/프로젝트_기록.md §11 #27).
+    # (경로에 맞는 차로로 투입 — 12팀 11/12, docs/프로젝트_기록.md 부록 #27).
     "depart_lane": "random",
     "depart_speed": 8.0,      # 신규 차량 진입 속도 (m/s).
                               # 입구에서 천천히 들어와 자기 컨트롤러로 가속.

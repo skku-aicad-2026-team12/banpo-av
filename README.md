@@ -12,7 +12,7 @@
 
 ## 결과
 
-최종 모델 `results/team_rl_1120_U5/model_261632.pt` — 무작위 출발 차로, 학습 · 선별에 쓰지 않은 새 시드 3,000판 (5개 경로 × 600판).
+최종 모델 `results/team_rl_1120_U5/model_261632.pt` — 무작위 출발 차로, 학습에 쓰지 않은 새 시드 3,000판 (5개 경로 × 600판, 그중 판 600~799는 모델 비교에도 쓰지 않은 확정 평가).
 
 | 지표 | 값 |
 |---|---|
@@ -91,9 +91,11 @@ python -X utf8 data_collection/collect_pomdp_data.py --model results/team_rl_112
 # 4. 주행 영상 (ffmpeg 필요) → environment/road/videos/
 python -X utf8 environment/road/record_video.py --model results/team_rl_1120_U5/model_261632.pt --route goga-jamsu --episode 22 --depart-lane 0 --depart-speed limit --name goga-jamsu_ep22
 
-# 기준 지표 — SUMO 기본 운전자 (evaluation/baseline_metrics.csv · baseline_report.md를 덮어쓴다)
+# 기준 지표 — SUMO 기본 운전자, 경로 3개 · 경로 차로 출발 (evaluation/baseline_metrics.csv · baseline_report.md를 덮어쓴다)
 python -X utf8 evaluation/baseline.py --episodes 30 --workers 7
 ```
+
+저장소의 `evaluation/baseline_report.md` · `baseline_metrics.csv`는 11/16에 잰 옛 기준(경로 3개 · 경로 차로 출발)이다. 최종 모델 평가 보고서의 기준 줄은 5개 경로 · 무작위 출발로 잰 `evaluation/baseline_metrics_random.csv`를 쓴다 (출발 옵션이 무작위면 `baseline.py`가 자동으로 고름).
 
 학습을 처음부터 다시 하려면 `training/train_team.py` (`bc` → `rl --init <BC 모델> --teacher-lr 2e-4`). 최종 모델의 학습 설정은 [`results/team_rl_1120_U5/args.json`](results/team_rl_1120_U5/args.json).
 

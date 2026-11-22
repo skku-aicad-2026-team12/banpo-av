@@ -10,7 +10,7 @@
 - 결과: environment/road/build/check_long_report.txt (콘솔에도 출력). 종료 코드는 충돌 · 순간이동이 있을 때만 1.
   투입 부족 · 투입 대기 누적 · 자라는 대기열은 "주의(△)"로 따로 모아 보여 준다 (실패는 아니지만 원인을 확인 · 기록).
 - 11/12 이 점검으로 찾은 것: 회전교차로 고리 교착(2시간 뒤부터), 김포 방향 투입 −15~25%, 신반포로 동행 대기열 증가,
-  측도 남행 포켓 충돌 → 모두 고침 (`docs/프로젝트_기록.md` §11 #26~#29).
+  측도 남행 포켓 충돌 → 모두 고침 (`docs/프로젝트_기록.md` 부록 #26~#29).
 """
 import argparse, collections, os, statistics as st, sys
 import xml.etree.ElementTree as ET
