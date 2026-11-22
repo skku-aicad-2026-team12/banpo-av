@@ -4,7 +4,7 @@
 팀원: 김재령 · 배준서 · 윤동건 · 정상현 (가나다순)
 서울 반포대교 남단 ~ 신반포사거리를 SUMO로 실제 규모대로 구현하고, 잠수교 차량 통제(2026-10-26) **전·후** 두 교통 상황에서 자율주행차(AV)의 의사결정 모델(BC → 선생님 보정 PPO)을 학습 · 평가하고, 주행 데이터를 수집했다.
 
-- **프로젝트 페이지** · <https://skku-aicad-2026-team12.github.io/banpo-av/> (준비 중)
+- **프로젝트 페이지** · <https://skku-aicad-2026-team12.github.io/banpo-av/> (발표자료 준비 후 수정 필요)
 - **데이터셋 (Hugging Face)** · <https://huggingface.co/datasets/skku-aicad-2026-team12/banpo-av-dataset>
 - **주행 영상 5편** (YouTube) · 통제 전 [고가 → 잠수교](https://youtu.be/5h2dk-oDcSA) · [올림픽대로 → 잠수교](https://youtu.be/hS5VRAD5RiQ) / 통제 후 [측도 → 반포대교](https://youtu.be/WhpvJpyW3jg) · [고가 → 반포대교](https://youtu.be/KPofBx5-zJc) · [신반포로 → 반포대교](https://youtu.be/WEecXe-vcdk)
 
