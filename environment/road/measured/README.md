@@ -10,6 +10,8 @@
 | `tdata_signal_timing.py` | 위 신호 기록에서 이동류별 녹색 · 황색 길이, 주기, 시작 위치를 뽑는 스크립트 | (작성) |
 | `tdata_bus_노선분류_반포권역.txt` | 범위 안 정류소 6곳을 지나는 버스 노선의 진입 → 진출 방향 · 공식 배차 · 정차 정류소 | t-data 버스정보시스템 10246 · 10251 · 10257 · 10261 · 10262 |
 
+**출처 표시**: `tdata_*` 자료의 출처는 서울특별시 서울 교통빅데이터플랫폼(t-data, <https://t-data.seoul.go.kr>), `topis_*` 자료의 출처는 서울특별시 TOPIS(<https://topis.seoul.go.kr>)다. 원자료에서 반포 권역 지점 · 교차로 · 노선만 뽑아 실었다.
+
 ```bash
 # 측정 지점 교통량 검산 (도로망을 먼저 만든다: environment/road/build_net.py)
 python -X utf8 environment/road/calibrate.py
