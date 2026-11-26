@@ -47,7 +47,7 @@
 | AV 관측 | 49차원이다. 수업 기본 31차원에 경로 4(분기 2곳의 방향과 거리), 내 차로 진행 방향 4, 신호 3(색, 정지선 거리, 남은 시간), 경합 차량 4, 차로 제한속도 3을 더했다. |
 | AV 행동과 보상 | 가감속과 차로 변경을 낸다. 속도 명령의 상한은 수업 원본과 같이 차 최고속도뿐이다. 보상은 차로 제한속도 대비 속도 보상에 과속 감점(스텝마다 `0.5 × max(0, 속도 / 제한속도 − 1)`)을 뺀다. |
 | AV 학습 | 규칙 정책(선생님)으로 시범을 모아 BC와 DAgger를 하고, 선생님 보정 PPO로 이어서 학습했다. PPO 업데이트마다 그 rollout 관측에 선생님 정답으로 BC를 한 번 더 한다. |
-| 데이터 | 수업 기본 칼럼에 `sim_time`, `ego_route`, `signal_tls`, `signal_state`, `signal_remaining_s`, `end_reason`을 더했다. TODO_DATA 행, 26,000판이다. |
+| 데이터 | 수업 기본 칼럼에 `sim_time`, `ego_route`, `signal_tls`, `signal_state`, `signal_remaining_s`, `end_reason`을 더했다. 10,844,678행, 26,000판이다 (도착 97.60%, 충돌 0.73%). |
 
 수집 데이터 설명은 [Hugging Face 데이터셋 카드](https://huggingface.co/datasets/skku-aicad-2026-team12/banpo-av-dataset-v2)에, 도로망 명령과 코드 안의 규칙은 [`environment/road/README.md`](environment/road/README.md)에 있다.
 
