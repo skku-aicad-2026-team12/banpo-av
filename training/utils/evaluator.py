@@ -1,4 +1,4 @@
-"""정책 평가 유틸 — 주행 지표 측정.
+"""정책 평가 유틸 : 주행 지표 측정.
 
 알고리즘과 분리해둔 이유: 평가는 "정책이 무엇으로 학습됐는지"와 무관하다.
 `predict(obs, deterministic=True) -> action` 메서드만 있으면
@@ -23,7 +23,7 @@ class DrivingMetrics:
     timeout_rate: float     # 시간초과로 끝난 비율 (= 1 - 충돌 - 완주)
     mean_speed: float       # 전 스텝 평균 주행속도 (m/s)
     mean_gap: float         # 선행차 감지 스텝에서의 평균 차간거리 (m)
-    min_gap: float          # 관측된 최소 차간거리 (m) — 위험 운전 지표
+    min_gap: float          # 관측된 최소 차간거리 (m) : 위험 운전 지표
     ep_return: float        # 에피소드당 평균 누적 보상
     ep_length: float        # 에피소드당 평균 스텝 수
     lane_changes: float     # 에피소드당 평균 "실행된" 차선변경 횟수
@@ -58,7 +58,7 @@ def evaluate_policy(policy, env, n_episodes: int = 5,
     Note:
         모든 지표는 env.step()의 info(collided/arrived/speed/gap)에서 읽는다.
         관측(obs) 벡터의 구성과 무관하므로, 관측을 바꿔도 이 코드는 안 깨진다.
-    """
+"""
     n_collide, n_arrive, n_timeout = 0, 0, 0
     speeds, gaps, returns, lengths, lane_changes = [], [], [], [], []
 
@@ -86,7 +86,7 @@ def evaluate_policy(policy, env, n_episodes: int = 5,
 
             # 속도/차간거리는 env가 info로 넘겨주는 원시값(m/s, m)을 쓴다.
             # 관측(obs) 레이아웃이 바뀌어도 평가 코드는 영향받지 않는다.
-            # 종료 스텝은 None (ego가 이미 제거됨) → 통계에서 제외.
+            # 종료 스텝은 None (ego가 이미 제거됨)  /  통계에서 제외.
             if info.get("speed") is not None:
                 speeds.append(float(info["speed"]))
             if info.get("gap") is not None:

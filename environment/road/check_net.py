@@ -5,9 +5,9 @@
     python -X utf8 environment/road/check_net.py --scenario after --no-sim
 검사:
   1. 길이: road_spec.SPEC_LENGTHS (확정안) vs 도로망 엣지 길이
-  2. 경로: 진입점 × 출구 조합별 주행 가능 여부 (차로 단위 — routing.lane_path)
+  2. 경로: 진입점 × 출구 조합별 주행 가능 여부 (차로 단위 : routing.lane_path)
   3. 규칙: ① 지하차도는 고가 쪽 왼쪽 차로에서만 · 차로 변경 금지 속성 · 신반포로 서행 좌회전 없음 · U턴 없음 · 잠수교(시나리오)
-  4. 주행 테스트 (--no-sim 이면 생략): 주행 가능한 경로마다 승용차 1대 → 모두 도착 · 순간이동(teleport) 0
+  4. 주행 테스트 (--no-sim 이면 생략): 주행 가능한 경로마다 승용차 1대  /  모두 도착 · 순간이동(teleport) 0
 결과 요약은 environment/road/build/<scenario>/check_report.txt 에도 저장한다.
 after는 build_net이 잠수교 엣지를 지워 만든 정적 도로망(environment/road/build/after)이다. 환경(학습 · 수집)의 보행화 후는 before 도로망에서 실행 중
 잠수교를 막는 방식이라(environment/env/sumo_env.py apply_after_closure) environment/road/check_env.py · check_long.py가 검증한다.
@@ -30,7 +30,7 @@ def check(scn, build, run_sim):
         nonlocal fails; fails += 1; say("  ✗ " + s)
     net, lane_attr = routing.load(netf)
     say(f"===== [{scn}{' — build_net 정적 도로망' if scn == 'after' else ''}] {netf}")
-    if scn == "after":   # 환경의 보행화 후는 before 도로망 + 실행 중 통제(environment/env/sumo_env.py apply_after_closure) → check_env · check_long이 검증
+    if scn == "after":   # 환경의 보행화 후는 before 도로망 + 실행 중 통제(environment/env/sumo_env.py apply_after_closure)  /  check_env · check_long이 검증
         say("  (환경이 학습 · 수집에 쓰는 보행화 후가 아님: 잠수교 엣지를 지운 environment/road/build/after — 도로 연결 규칙 확인용)")
 
     say("1. 길이 (도로망 엣지 + 그 사이 교차로 내부 길이 / 확정안)")
@@ -82,7 +82,7 @@ def check(scn, build, run_sim):
     if cl and "passenger" not in cl and cr and "passenger" not in cr:
         say(f"  ✓ 차로 변경 금지: m1_3 → 왼쪽 '{cl}' 만 · m1_4 → 오른쪽 '{cr}' 만")
     else: bad(f"차로 변경 금지 속성 누락: m1_3 changeLeft={cl}, m1_4 changeRight={cr}")
-    # 차량 차로 0~2 (보도가 있으면 도로망 차로 번호는 1씩 밀린다 — road_spec.net_lane)
+    # 차량 차로 0~2 (보도가 있으면 도로망 차로 번호는 1씩 밀린다 : road_spec.net_lane)
     a7 = {t for li in range(3) for t, _ in out_lanes("sbr_a7b", S.net_lane("sbr_a7b", li))}
     if a7 == {"sbr_e1a"}: say("  ✓ 신반포로 서행(A7)은 직진만 (좌회전·우회전은 우회전 도로)")
     else: bad(f"신반포로 서행 연결이 예상과 다름: {a7}")

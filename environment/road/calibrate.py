@@ -5,13 +5,13 @@
 
 먼저 environment/road/build/before/banpo.net.xml이 있어야 한다 (python -X utf8 environment/road/build_net.py).
 
-1. 실측 목표: environment/road/measured/topis_2026_09_반포권역_시간대평균.csv 에서 평일 11~15시 평균 (대/시).
-   신반포로(D-36 사평대로 대용)는 참고로만 출력 (측정 지점이 없어 비교하지 않음 — 진입량은 4절)
+1. 실측 목표: docs/02.근거/교통_신호_버스/topis_2026_09_반포권역_시간대평균.csv 에서 평일 11~15시 평균 (대/시).
+   신반포로(D-36 사평대로 대용)는 참고로만 출력 (측정 지점이 없어 비교하지 않음 : 진입량은 4절)
 2. 수요 검사: environment/env/road_config.py TRAFFIC["od"]를 차로 단위 경로로 배정해, 측정 지점 8곳(반포대교 북행 · 남행,
    잠수교 북행 · 남행, 반포대로 북행 · 남행, 올림픽대로 양방향)에 흐르는 교통량을 실측과 비교 (보행화 전: TOPIS,
-   후: t-data 10081 — after_target에 적어 둔 실측값)
-3. 신호 주기 (기록용 — 신호가 추정이던 11/12의 계산): 신반포사거리 회전 교통량 → Webster 주기 + 보행 최소 녹색
-   → 현시별 녹색시간 (road_spec.SIGNAL_PLAN과 비교)
+   후: t-data 10081 : after_target에 적어 둔 실측값)
+3. 신호 주기 (기록용 : 신호가 추정이던 11/12의 계산): 신반포사거리 회전 교통량  /  Webster 주기 + 보행 최소 녹색
+    /  현시별 녹색시간 (road_spec.SIGNAL_PLAN과 비교)
 4. 실측 신호(road_spec.SIGNALS["ix"]) 기준 그룹별 포화도와 신반포로 권장 진입량 (지금 수요의 근거, 11/13)
 결과는 environment/road/build/calibrate_report.txt 에도 저장한다.
 """
@@ -23,10 +23,10 @@ import road_spec as S
 import routing
 from env.road_config import TRAFFIC
 
-TOPIS = os.path.join(ROOT, "environment", "road", "measured", "topis_2026_09_반포권역_시간대평균.csv")
+TOPIS = os.path.join(ROOT, "docs", "02.근거", "교통_신호_버스", "topis_2026_09_반포권역_시간대평균.csv")
 HOURS = range(11, 16)                  # 평일 낮 (11~15시)
 
-# 측정 지점 → 도로망에서 같은 교통량이 지나는 엣지
+# 측정 지점  /  도로망에서 같은 교통량이 지나는 엣지
 POINTS = {
     ("C-11", "반포대교남단->반포대교북단"): ("bridge", "반포대교 상층 북행"),
     ("C-11", "반포대교북단->반포대교남단"): ("sb_up", "반포대교에서 내려오는 남행"),
@@ -57,7 +57,7 @@ def targets():
 
 
 def assign(net, lane_attr, scn):
-    """시나리오별 OD를 경로로 배정 → {엣지: 대/시}, {(from, to) at ix: 대/시}."""
+    """시나리오별 OD를 경로로 배정  /  {엣지: 대/시}, {(from, to) at ix: 대/시}."""
     closed = set(S.CLOSED_AFTER) if scn == "after" else set()
     edge_flow, paths = {}, []
     for entry, spec in TRAFFIC["od"].items():
@@ -86,7 +86,7 @@ def main():
         say(f"   {e:8s} {v:7.0f}  {name}")
 
     say("\n2. 수요 배정 결과 vs 실측 (잠수교 폐쇄 전 = 9월 실측, 후 = 11/9~11 실측)")
-    # 보행화 후 목표: 서울 t-data "1시간 지점별 교통량(차로별)" 11/9~11 평일 11~15시 평균 (environment/road/measured/tdata_10081_*.csv, 11/12)
+    # 보행화 후 목표: 서울 t-data "1시간 지점별 교통량(차로별)" 11/9~11 평일 11~15시 평균 (docs/02.근거/교통_신호_버스/tdata_10081_*.csv, 11/12)
     after_target = {"bridge": 2858, "sb_up": 2384, "jam_n": 0.0, "jam_s": 0.0, "bp_nb": 2233, "bp_sb": 1974, "wb_a": 7190, "eb_a": 5219}
     for scn in ("before", "after"):
         flow, _ = assign(net, lane_attr, scn)
@@ -101,7 +101,7 @@ def main():
             mark = "✓" if (got == 0 if t == 0 else abs(err) <= 10) else "✗"   # 목표 0(통제된 잠수교)은 배정도 0이어야 통과
             say(f"   {mark} {e:8s} 배정 {got:7.0f}   목표 {t:7.0f}   {err:+5.1f}%")
 
-    # 3. 신호 (보행화 전 수요 기준 — 실제 신호도 폐쇄 전부터 운영돼 온 것)
+    # 3. 신호 (보행화 전 수요 기준 : 실제 신호도 폐쇄 전부터 운영돼 온 것)
     say("\n3. 신반포사거리 신호 (Webster + 보행 최소 녹색)")
     _, paths = assign(net, lane_attr, "before")
     mv = {}
@@ -181,7 +181,7 @@ def main():
     #   처리할 수 있는 크기"로 추정했는데(사평대로 실측의 약 0.53배), 실측 신호에서는 서행 직진 녹색이 44 s뿐이라 그 값이 넘친다.
     #   같은 원칙으로 다시 정한다: 그룹 포화도 x = 회전 교통량 / (승용차 차로 수 × 포화교통류율 × 녹색 / 주기).
     #   녹색 = 실측 녹색 시간(황색 · 출발 손실은 서로 상쇄한다고 봄). 처리하지 못하는(x > x_target) 진입로만
-    #   x_target에 맞춰 줄인다 — 늘리지는 않는다(늘리면 반포대교 등 실측 지점 교통량 맞춤이 깨짐).
+    #   x_target에 맞춰 줄인다 : 늘리지는 않는다(늘리면 반포대교 등 실측 지점 교통량 맞춤이 깨짐).
     sp = S.SIGNALS["ix"]
     say(f"\n4. 실측 신호 기준 포화도 (주기 {sp['cycle']} s, 포화교통류율 직진 {plan['sat_through']} · 좌회전 {plan['sat_left']}, 목표 {x_t})")
     worst = {}

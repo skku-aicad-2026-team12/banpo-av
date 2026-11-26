@@ -1,21 +1,7 @@
-"""저장소 경로 — 모든 실행 스크립트가 맨 위에서 불러 쓴다.
+"""실행 스크립트가 공유하는 저장소 경로와 모듈 검색 경로.
 
-폴더 구조 (Environment / Training / Evaluation / Data Collection):
-    environment/env/     수업 Gym 환경 + 반포 도로망 연결 (패키지 `env`)
-    environment/road/    도로 정의 · 생성 · 검증 (road_spec · build_net · routing · check_* …)
-    training/            train_team.py · train.py + 패키지 `algorithms` · `utils`
-    evaluation/          metrics · lanes · baseline (평가 · 기준 지표)
-    data_collection/     collect_pomdp_data.py
-    data/ · results/     수집 데이터 · 학습 모델 (저장소 루트)
-
-이 모듈을 불러오면 위 폴더들이 모듈 검색 경로에 들어가, 어디서 실행하든
-`from env import ...`, `import road_spec`, `from algorithms.ppo import PPO`, `import train`,
-`import metrics`, `import collect_pomdp_data`가 그대로 동작한다.
-
-실행 스크립트 첫머리 (저장소 루트까지의 깊이만 다름):
-    import os, sys
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-    import repo_paths as P
+각 실행 파일은 저장소 루트를 먼저 sys.path에 넣은 뒤 이 모듈을 불러온다.
+환경·학습 하위 모듈을 기존 import 이름으로 사용할 수 있도록 경로를 등록한다.
 """
 import os
 import sys
@@ -33,7 +19,7 @@ EVALUATION = os.path.join(ROOT, "evaluation")
 DATA_COLLECTION = os.path.join(ROOT, "data_collection")
 DATA = os.path.join(ROOT, "data")
 RESULTS = os.path.join(ROOT, "results")
-EVIDENCE = os.path.join(ROOT, "environment", "road", "measured")
+EVIDENCE = os.path.join(ROOT, "docs", "02.근거")
 
 for _d in (DATA_COLLECTION, EVALUATION, TRAINING, ROAD_DIR, ENVIRONMENT, ROOT):
     if _d not in sys.path:

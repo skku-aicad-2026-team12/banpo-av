@@ -7,7 +7,7 @@ record_video.py --episode N 과 **같은 시드 · 같은 출발 조건**으로 
 차로 변경이 거의 없다). --depart-lane random(평가 · 최종 수집 조건) · best · 차로 번호도 된다.
 
 사용 (저장소 루트에서):
-    python -X utf8 environment/road/pick_video_episodes.py --model results/team_rl_1120_U5/model_261632.pt
+    python -X utf8 environment/road/pick_video_episodes.py --model results/team_rl_1125_VA2/model_261632.pt
     python -X utf8 environment/road/pick_video_episodes.py --model … --routes goga-jamsu side-banpo --episodes 60 --top 5
 
 점수 (도착한 판만, 시간은 초):
@@ -36,8 +36,8 @@ SEED = {"side-banpo": 1000, "goga-banpo": 2000, "goga-jamsu": 3000, "oly-jamsu":
 DT = M.DT
 
 
-# 경로별 가장 어려운 출발 차로 (11/21, 확정 평가 evaluation/eval/final_U5_261632 1,000판의 출발 차로별 평균 차로 변경이 가장 많은 차로):
-#   goga-jamsu 0번 5회 · goga-banpo 0번 4회 · side-banpo 5번 3회 · oly-jamsu 2번 2.9회 · sbr-banpo 1번 1회 (모두 도착률 92% 이상)
+# 경로별 가장 어려운 출발 차로 (확정 평가 evaluation/eval/final_VA2_261632 1,000판에서 출발 차로별 평균 차로 변경이 가장 많은 차로):
+#   goga-jamsu 0번 5회 · goga-banpo 0번 4회 · side-banpo 5번 2.9회 · oly-jamsu 2번 2.9회 · sbr-banpo 1번 1회 (모두 도착률 90% 이상)
 HARD_LANE = {"goga-jamsu": 0, "goga-banpo": 0, "side-banpo": 5, "oly-jamsu": 2, "sbr-banpo": 1}
 
 

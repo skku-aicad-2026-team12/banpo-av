@@ -1,4 +1,4 @@
-"""기준 지표: SUMO 기본 운전자로 시나리오 × AV 경로마다 여러 번 주행 → 잠수교 통제 전후 비교.
+"""기준 지표: SUMO 기본 운전자로 시나리오 × AV 경로마다 여러 번 주행  /  잠수교 통제 전후 비교.
 + 평가 (11/15 §12.0 7번): 학습 모델 · 규칙 정책을 같은 5조합 · 같은 시드 · 같은 지표로 돌려 실패 원인별로 센다.
 
 사용 (프로젝트 루트에서):
@@ -14,18 +14,18 @@
 - 수집 파일 없이 워커 프로세스 안에서 주행하고 바로 지표를 계산한다 (1,000회를 JSONL로 남기면 약 5 GB). 지표는
   metrics.episode_metrics 그대로라 기준 지표와 같은 정의다. 실패는 end_reason으로 나눠 센다: 충돌 collided · 경로 이탈 off_route ·
   비정상 정지 stuck · 신호 위반 red_light · 순간이동 teleported · 시간초과 timeout · 기타 other(end_reason 없음) ·
-  오류 error(SUMO 오류로 중단 — 11/16 검토 C3: 그 에피소드만 error로 적고 SUMO를 다시 띄워 나머지를 잇는다. 작업은
+  오류 error(SUMO 오류로 중단 : 11/16 검토 C3: 그 에피소드만 error로 적고 SUMO를 다시 띄워 나머지를 잇는다. 작업은
   에피소드 하나씩이라 워커 프로세스가 죽어도 그 에피소드만 다시 돌리고(_run_jobs), 그래도 죽으면 error로 적는다).
   error는 정책의 결과가 아니므로 도착률 · 충돌률 · 리턴 평균의 분모에서 뺀다 (보고서 "오류" 칸에 수만 적음).
   수업 test.py(11/16 지움) · training/utils/evaluator.py는
   앞의 넷을 모두 "시간초과"로 세므로 보고에 쓰지 않는다 (수업 원본은 고치지 않음).
 - --safety off | on | both: 안전장치(mdp_config.ACTION["safety_brake"], 충돌 방지 제동) 끔(기본, 11/17 컨설팅에서 불허) / 켬 / 둘 다. 켬이면 개입 횟수도 센다.
   SUMO 운전자에는 안전장치가 없다 (끔만).
-- 시드: 에피소드 번호마다 collect_pomdp_data.episode_seed(경로 시드, 번호) — 워커 수와 무관. --stochastic이면 정책 샘플링
+- 시드: 에피소드 번호마다 collect_pomdp_data.episode_seed(경로 시드, 번호) : 워커 수와 무관. --stochastic이면 정책 샘플링
   난수(torch)도 에피소드마다 같은 값으로 다시 정한다 (11/16: 켬/끔 · 다시 돌리기끼리 짝이 맞게). 기준 지표 수집도 --paired-seeds로
   같은 식을 쓰므로 같은 경로 · 같은 번호 = 같은 교통 조건 (AV가 다르게 움직이면 그 뒤 교통은 달라진다).
 - 출력: evaluation/eval/<이름>/metrics.csv (에피소드별) · report.md (요약 + 기준 지표 대비). 이름 = --name 또는 모델 폴더 이름
-  (파일이 model.pt가 아니면 뒤에 _<파일명>, 예: team_rl_x_model_200000 — 11/16 검토 C4: 체크포인트끼리 덮어쓰지 않게).
+  (파일이 model.pt가 아니면 뒤에 _<파일명>, 예: team_rl_x_model_200000 : 11/16 검토 C4: 체크포인트끼리 덮어쓰지 않게).
 
 - 수집은 data_collection/collect_pomdp_data.py --policy sumo를 그대로 쓴다 (data/baseline/<시나리오>_<경로>.jsonl.gz · .npz).
 - 지표 계산은 evaluation/metrics.py (기존 칼럼만). 나중에 학습한 AV 데이터도 같은 지표로 비교한다.
@@ -47,13 +47,13 @@ import repo_paths as P  # noqa: E402
 ROOT = P.ROOT
 import metrics  # noqa: E402
 
-# (시나리오, 경로) — 경로별 시나리오는 road_spec.AV_ROUTES의 scenarios (통제 전 잠수교 2 · 통제 후 반포대교 3)
+# (시나리오, 경로) : 경로별 시나리오는 road_spec.AV_ROUTES의 scenarios (통제 전 잠수교 2 · 통제 후 반포대교 3)
 COMBOS = [("before", "goga-jamsu"), ("before", "oly-jamsu"),
           ("after", "side-banpo"), ("after", "goga-banpo"), ("after", "sbr-banpo")]
 SEED = {"side-banpo": 1000, "goga-banpo": 2000, "goga-jamsu": 3000, "oly-jamsu": 4000, "sbr-banpo": 5000}
 DATA = os.path.join(ROOT, "data", "baseline")
 OUT_CSV = os.path.join(P.EVALUATION, "baseline_metrics.csv")
-# [12팀 11/19] B 갈래 기준 지표: SUMO 운전자, 무작위 출발 차로 · 출발 속도 제한속도 × 0.8 (평가 모드 --policy sumo --eval 결과의 metrics.csv 사본)
+# B 갈래 기준 지표: SUMO 운전자, 무작위 출발 차로 · 출발 속도 제한속도 × 0.8 (평가 모드 --policy sumo --eval 결과의 metrics.csv 사본)
 OUT_CSV_RANDOM = os.path.join(P.EVALUATION, "baseline_metrics_random.csv")
 OUT_MD = os.path.join(P.EVALUATION, "baseline_report.md")
 
@@ -92,6 +92,33 @@ def fmt(xs):
     return f"{stt.mean(xs):.1f} ± {stt.stdev(xs):.1f} (중앙 {med:.1f})"
 
 
+def _overspeed_report(rows, safeties=None):
+    """실패 판도 포함하고 전체·경로별 스텝 가중 비율 및 최대값을 표시한다."""
+    lines = ["", "## 과속", "",
+             "> 차로별 제한속도는 생성된 SUMO net.xml의 lane speed(m/s), 교차로 내부 차로도 포함한다. "
+             f"초과 스텝 판정 허용 오차 {metrics.OVERSPEED_EPS_MPS:g} m/s. "
+             "도착·실패 판 모두 포함하고 error 판은 제외한다.",
+             "> 초과 스텝 % = 초과 스텝 합 / 제한속도 확인 스텝 합 × 100 (판별 %의 단순 평균이 아님). "
+             "최대 초과폭은 전체 스텝의 최댓값. 미확인 스텝이 있으면 전체 구간을 검증한 값으로 볼 수 없다.", "",
+             "| 안전장치 | 구분 | 제한속도 확인 스텝 | 초과 스텝 | 초과 스텝 % | > 1 km/h % | > 2 km/h % | > 5 km/h % | 최대 초과 (km/h) | 미확인 스텝 |",
+             "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for sf in safeties or [None]:
+        group = [r for r in rows if sf is None or r.get("safety") == sf]
+        groups = [("전체", group)] + [(f"{scn} · {route}", [r for r in group
+                   if (r.get("scenario"), r.get("ego_route")) == (scn, route)]) for scn, route in COMBOS]
+        for label, selected in groups:
+            if not selected:
+                continue
+            stat = metrics.overspeed_summary(selected)
+            pct = "—" if stat["overspeed_pct"] == "" else f"{stat['overspeed_pct']:.3f}"
+            maximum = "—" if stat["max_overspeed_kmh"] == "" else f"{stat['max_overspeed_kmh']:.3f}"
+            bands = " | ".join("—" if stat.get(f"overspeed_gt{k}_pct", "") == "" else f"{stat[f'overspeed_gt{k}_pct']:.3f}"
+                               for k in metrics.OVERSPEED_BANDS_KMH)
+            lines.append(f"| {sf or '—'} | {label} | {stat['speed_limit_steps']} | {stat['overspeed_steps']} | "
+                         f"{pct} | {bands} | {maximum} | {stat['speed_limit_unknown_steps']} |")
+    return lines
+
+
 def report(rows, episodes_each):
     groups = {c: [r for r in rows if (r["scenario"], r["ego_route"]) == c] for c in COMBOS}
     L = [f"# 기준 지표 — SUMO 기본 운전자, 잠수교 통제 전후 ({datetime.now():%Y-%m-%d %H:%M})", "",
@@ -119,7 +146,7 @@ def report(rows, episodes_each):
           "> 전 · 후는 각 조합의 평균(값이 있는 에피소드 수 n). 짝 비교는 같은 에피소드 번호(같은 시드)끼리의 차이 평균과 짝지은 t다.",
           "> |t|가 대략 2 이상(30쌍이면 2.05)이면 p < 0.05. 비율(%)은 전 값이 1 이상일 때만 표시한다.", "",
           "| 경로 | 지표 | 전 (n) | 후 (n) | 차이 | 짝 차이 (쌍) | 짝지은 t |", "|---|---|---|---|---|---|---|"]
-    # 두 시나리오 모두에 있는 경로만 (지금 구성에서는 없음 → 표 머리만 남는다)
+    # 두 시나리오 모두에 있는 경로만 (지금 구성에서는 없음  /  표 머리만 남는다)
     for route in [r for s, r in COMBOS if s == "before" and ("after", r) in groups]:
         for key, label, arrived_only in SUMMARY:
             pick = (lambda g: [r for r in g if r["end_reason"] == "arrived"]) if arrived_only else (lambda g: g)
@@ -138,14 +165,15 @@ def report(rows, episodes_each):
                 sd = stt.stdev(diffs)
                 pt = f"{stt.mean(diffs) / (sd / len(diffs) ** 0.5):+.1f}" if sd > 0 else "—"
             L.append(f"| {route} | {label} | {mb:.1f} ({len(xb)}) | {ma:.1f} ({len(xa)}) | {d} | {pd} | {pt} |")
+    L += _overspeed_report(rows)
     with open(OUT_MD, "w", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")
     print("\n".join(L))
 
 
-# ══════════════════════════════════════════════════════════════════
+
 # 평가 모드 (11/15 §12.0 7번)
-# ══════════════════════════════════════════════════════════════════
+
 FAIL_REASONS = ["collided", "off_route", "stuck", "red_light", "teleported", "timeout", "other", "error"]
 REASON_KO = {"arrived": "도착", "collided": "충돌", "off_route": "경로 이탈", "stuck": "비정상 정지", "red_light": "신호 위반",
              "teleported": "순간이동", "timeout": "시간초과", "other": "기타", "error": "오류"}
@@ -154,7 +182,7 @@ POOL_ROUNDS = 3          # 워커 프로세스가 죽었을 때 남은 작업을
 
 
 def _eval_worker(job):
-    """워커 하나: (정책, 모델, 안전장치, 시나리오, 경로, 에피소드 번호 목록, sumocfg, stochastic) → 에피소드별 지표 행 목록.
+    """워커 하나: (정책, 모델, 안전장치, 시나리오, 경로, 에피소드 번호 목록, sumocfg, stochastic)  /  에피소드별 지표 행 목록.
     collect_pomdp_data.collect와 같은 환경 설정 · 같은 정책 생성(make_policy) · 같은 시드 식. 기록은 메모리에서만 (지표 계산에
     필요한 칼럼만: state · signal · event 차로 · end_reason)."""
     import argparse as _ap
@@ -196,13 +224,13 @@ def _eval_worker(job):
             recs.append({"episode": ep, "scenario": info.get("scenario"), "ego_route": info.get("route"),
                          "end_reason": info.get("end_reason"), "state": st, "signal": sig,
                          "event": {"lane_before": info["lane_before"], "lane_after": info["lane_after"]},
-                         # [12팀 11/19] 차로 변경 집계용 (metrics: 명령 ≠ 0 이고 실행됨 — 도로 경계 스텝도 센다)
+                         # 차로 변경 집계용 (metrics: 명령 ≠ 0 이고 실행됨 : 도로 경계 스텝도 센다)
                          "action": {"lane_change": int(info["lane_change"]), "lane_change_applied": bool(info["lane_change_applied"])},
                          "next_state": {"ego_road_id": nst.get("ego_road_id")}})
             st = nst
         m = metrics.episode_metrics(recs)
         m.update({"file": f"{scn}_{route}", "safety": safety, "return": round(ret, 3),
-                  "depart_lane": info0.get("depart_lane"),        # [12팀 11/19] 실제 출발 차로 (차로별 집계용)
+                  "depart_lane": info0.get("depart_lane"),        # 실제 출발 차로 (차로별 집계용)
                   "safety_interventions": info.get("safety_interventions", 0)})
         return m
 
@@ -213,7 +241,7 @@ def _eval_worker(job):
             try:
                 m = run(env, act, ep)
                 print(f"  [{scn} {route} 안전장치 {safety}] ep {ep:3d}: {m['end_reason']} {m['travel_s']:.0f}s", flush=True)
-            except Exception as e:          # noqa: BLE001 — SUMO 오류: 이 에피소드만 error로 적고 SUMO를 새로 띄워 잇는다
+            except Exception as e:          # noqa: BLE001 : SUMO 오류: 이 에피소드만 error로 적고 SUMO를 새로 띄워 잇는다
                 m = _error_row(scn, route, safety, ep)
                 print(f"  [{scn} {route} 안전장치 {safety}] ep {ep:3d}: error {e!r}", flush=True)
                 try:
@@ -276,7 +304,7 @@ def eval_report(rows, title, out_md, safeties, base_csv=None):
             nv = len(g) - ends.get("error", 0)
             L.append(f"| {sf} | {scn} | {route} | {nv} | {(ends.get('arrived', 0) / nv) if nv else 0:.0%} | "
                      + ", ".join(f"{REASON_KO.get(k, k)} {v}" for k, v in ends.most_common()) + " |")
-    base = []                                 # 기준 지표 (SUMO 운전자 — base_csv, 기본 evaluation/baseline_metrics.csv)
+    base = []                                 # 기준 지표 (SUMO 운전자 : base_csv, 기본 evaluation/baseline_metrics.csv)
     base_csv = base_csv or OUT_CSV
     if os.path.exists(base_csv):
         with open(base_csv, encoding="utf-8-sig") as f:
@@ -295,6 +323,7 @@ def eval_report(rows, title, out_md, safeties, base_csv=None):
                 L.append("| · 기준 | " + " | ".join(bcells) + " |")
     L += ["", f"> 기준 지표는 evaluation/{os.path.basename(base_csv)} 그대로다 (SUMO 운전자 — 이 평가와 출발 조건이 같은 측정)."
           if base else f"> 기준 지표 파일(evaluation/{os.path.basename(base_csv)})이 없어 비교를 생략했다."]
+    L += _overspeed_report(rows, safeties)
     os.makedirs(os.path.dirname(out_md), exist_ok=True)
     with open(out_md, "w", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")
@@ -302,7 +331,7 @@ def eval_report(rows, title, out_md, safeties, base_csv=None):
 
 
 def depart_options(a):
-    """[12팀 11/19] --depart-lane / --depart-speed → env.reset options (기본값 best · default면 빈 dict = 옵션 안 줌, 기존 동작)."""
+    """--depart-lane / --depart-speed  /  env.reset options (기본값 best · default면 빈 dict = 옵션 안 줌, 기존 동작)."""
     opts = {}
     dl = str(getattr(a, "depart_lane", "best"))
     if dl == "random":
@@ -330,7 +359,7 @@ def _job_errors(job, e):
 def _run_jobs(jobs, workers):
     """작업을 프로세스 풀로 돌린다 (multiprocessing.Pool은 워커가 죽으면 멈춰 버려서 이것을 쓴다).
 
-    워커 프로세스가 죽으면(libsumo 치명 오류 등) 풀 전체가 깨져 끝나지 않은 작업이 모두 실패한다 → 남은 작업을 새 풀로
+    워커 프로세스가 죽으면(libsumo 치명 오류 등) 풀 전체가 깨져 끝나지 않은 작업이 모두 실패한다  /  남은 작업을 새 풀로
     POOL_ROUNDS번까지 다시 돌리고, 그래도 남으면 작업마다 따로 프로세스를 띄워 돌린다 (죽는 작업이 다른 작업을 끌고 가지
     않게). 거기서도 죽는 작업의 에피소드는 error 행으로 적는다."""
     from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -347,7 +376,7 @@ def _run_jobs(jobs, workers):
                     rows += f.result()
                 except BrokenProcessPool:
                     failed.append(futs[f])
-                except Exception as e:          # noqa: BLE001 — 그 밖의 예외: 그 작업만 error로 적고 나머지는 계속
+                except Exception as e:          # noqa: BLE001 : 그 밖의 예외: 그 작업만 error로 적고 나머지는 계속
                     rows += _job_errors(futs[f], e)
         if not failed:
             return rows
@@ -387,7 +416,7 @@ def evaluate(a):
     # 작업 = 에피소드 하나 (11/16: 워커 프로세스가 죽어도 그 에피소드만 다시 돌리게. 에피소드마다 SUMO를 새로 띄우므로
     # 작업마다 환경 · 정책을 새로 만드는 비용은 작다).
     depart = depart_options(a)
-    combos = [c for c in COMBOS if a.route in (None, c[1])]          # [12팀 11/19] --route: 그 경로만
+    combos = [c for c in COMBOS if a.route in (None, c[1])]          # --route: 그 경로만
     jobs = [(pol, a.model, sf, scn, route, [ep], sumocfg, a.stochastic, depart)
             for ep in range(a.episode_start, a.episode_start + eps) for sf in safeties for scn, route in combos]
     print(f"[평가] {name}: 정책 {pol}, 안전장치 {'/'.join(safeties)}, {len(combos)}조합 × {eps}회, workers={a.workers} (작업 {len(jobs)}개)"

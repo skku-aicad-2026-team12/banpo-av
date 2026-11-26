@@ -1,31 +1,8 @@
-"""도로 구조 확인 스크립트 — 학습 없이 도로만 눈으로 확인한다.
+"""학습 없이 SUMO GUI에서 반포 도로망을 확인한다.
 
-environment/env/road_config.py 를 수정한 뒤, 학습을 돌리기 전에
-"도로가 의도대로 만들어졌는지 / 교통 밀도가 적당한지"를
-sumo-gui 화면으로 빠르게 확인하는 용도.
-
-사용법:
-    python environment/view_road.py             # sumo-gui로 도로를 띄운다 (정적 — 자동 재생 안 함)
-    python environment/view_road.py --netedit   # netedit(SUMO 도로 편집기)로 도로망 열기
-    python environment/view_road.py --nogui     # 화면 없이 설정 검증만 (GUI 없는 서버용)
-
-기본 모드(sumo-gui) 동작:
-    창이 뜨면 도로만 정적으로 보인다. 차를 움직이려면 상단의 ▶(플레이) 버튼을
-    직접 누르면 되고, 시뮬레이션이 끝나도 창이 저절로 닫히지 않는다.
-    (일시정지/한 스텝씩 진행 버튼으로 원하는 만큼 관찰 가능)
-
-관찰 포인트:
-    - 차선 수 / 도로 길이가 road_config.ROAD 대로인지  ← 재생 없이 바로 확인 가능
-    - (▶ 재생 후) 교통량(TRAFFIC["vehs_per_hour"])이 너무 한산하거나 막히지 않는지
-      → 정체가 심하면 학습 난이도가 급상승하니 여기서 미리 조정
-    - 재생 속도는 상단 Delay(ms) 값으로 조절 (크게 잡을수록 느리게)
-
-※ netedit 관련 주의:
-    netedit에서 도로를 수정하고 저장해도, 다음번 training/train.py 실행 시
-    road_builder가 environment/env/road_config.py 기준으로 파일을 **덮어쓴다**.
-    이 프로젝트에서 도로의 원본(source of truth)은 어디까지나
-    environment/env/road_config.py 이므로, 영구적인 수정은 그 파일에서 할 것.
-    (netedit은 구조를 뜯어보거나 좌표를 확인하는 용도로 쓰면 좋다)
+실행: python -X utf8 environment/view_road.py
+도로 파일을 현재 설정으로 생성한 뒤 일시정지 상태로 연다.
+GUI에서 재생해 차로 연결, 배경 교통, 합류·신호 대기열을 확인할 수 있다.
 """
 import argparse
 import os
@@ -70,7 +47,7 @@ if __name__ == "__main__":
                              "(GUI 모드는 시간 제한 없이 사용자가 직접 제어)")
     args = parser.parse_args()
 
-    # 1) road_config 기준으로 SUMO 파일 (재)생성 — 수정사항이 즉시 반영된다
+    # 1) road_config 기준으로 SUMO 파일 (재)생성 : 수정사항이 즉시 반영된다
     sumocfg = road_builder.build(ROAD, EGO, TRAFFIC, P.SUMO_DIR)
     # 도로망 파일은 sumocfg와 같은 폴더 (직선 도로: highway.net.xml / 실제 도로망: banpo.net.xml)
     net_file = os.path.join(os.path.dirname(sumocfg),
@@ -100,10 +77,10 @@ if __name__ == "__main__":
     else:
         # sumo-gui: 도로를 "정적으로" 띄운다.
         #   --start, --quit-on-end, --end 를 모두 주지 않는 것이 핵심:
-        #     --start 없음      → 자동 재생 안 함. 창이 뜨면 도로만 보이고,
+        #     --start 없음       /  자동 재생 안 함. 창이 뜨면 도로만 보이고,
         #                         사용자가 ▶(플레이) 버튼을 눌러야 차가 움직인다.
-        #     --quit-on-end 없음 → 시뮬레이션이 끝나도 창이 저절로 닫히지 않는다.
-        #     --end 없음        → 시간 제한 없음. 원하는 만큼 돌려볼 수 있다.
+        #     --quit-on-end 없음  /  시뮬레이션이 끝나도 창이 저절로 닫히지 않는다.
+        #     --end 없음         /  시간 제한 없음. 원하는 만큼 돌려볼 수 있다.
         #   --delay 100 : 재생 시 스텝당 100ms (0이면 눈으로 못 따라갈 만큼 빠름).
         #                 GUI 상단 Delay 입력칸에서 실행 중에도 바꿀 수 있다.
         print("sumo-gui 실행 중...")

@@ -1,4 +1,4 @@
-"""로깅 유틸 — 콘솔 / TensorBoard / CSV 를 한 곳에서 처리.
+"""로깅 유틸 : 콘솔 / TensorBoard / CSV 를 한 곳에서 처리.
 
 알고리즘 코드가 로깅 세부사항(파일 경로, 텐서보드 유무 등)을 신경쓰지
 않도록 분리했다. 알고리즘은 `logger.log_train(...)` 처럼 부르기만 하면 된다.
@@ -13,8 +13,8 @@ class RunLogger:
     - 콘솔: 사람이 읽을 한 줄 요약
     - TensorBoard: results/<run>/tb/ 에 스칼라 기록 (tensorboard 없으면 자동 생략)
     - CSV: training_log.csv(학습 곡선), eval_log.csv(주행 지표)
-           → close() 또는 save_csv() 호출 시 파일로 씀
-    """
+            /  close() 또는 save_csv() 호출 시 파일로 씀
+"""
 
     def __init__(self, run_dir: str, use_tensorboard: bool = True):
         self.run_dir = run_dir

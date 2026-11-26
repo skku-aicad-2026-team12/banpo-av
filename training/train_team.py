@@ -1,11 +1,11 @@
-"""12팀 학습 스크립트 — BC로 PPO 정책을 초기화하고, 여러 SUMO 워커로 PPO를 병렬 학습한다.
+"""12팀 학습 스크립트 : BC로 PPO 정책을 초기화하고, 여러 SUMO 워커로 PPO를 병렬 학습한다.
 
 수업 원본 PPO(training/algorithms/ppo.py)는 고치지 않는다. 보상 · 하이퍼파라미터(training/train.py의 REWARD_OVERRIDES · HPARAMS)는
-바꿀 수 있지만 두 학습 갈래가 같은 값을 써야 하므로 함께 바꾼다.
+바꿀 수 있지만 두 학습 갈래가 같은 값을 써야 하므로 PR로만 바꾼다 (docs/00.필독/공통_설명.md §4).
 PPO 클래스 · 하이퍼파라미터(train.HPARAMS) · 보상(train.REWARD) · 환경 설정은 수업 코드를 그대로 가져다 쓴다.
 
 사용 (프로젝트 루트에서):
-    # 1) BC: SUMO 운전자 시범으로 PPO 정책(HybridActorCritic)을 지도학습 → PPO와 같은 형식의 model.pt
+    # 1) BC: SUMO 운전자 시범으로 PPO 정책(HybridActorCritic)을 지도학습  /  PPO와 같은 형식의 model.pt
     python -X utf8 training/train_team.py bc --data data/baseline/*.npz data/bc_demo/*.npz --epochs 30
 
     # 2) RL: BC 가중치에서 시작해 PPO (워커 7개 병렬)
@@ -18,16 +18,16 @@ PPO 클래스 · 하이퍼파라미터(train.HPARAMS) · 보상(train.REWARD) ·
 BC (bc):
 - 정책: PPO와 같은 HybridActorCritic (hidden · activation은 train.HPARAMS). 그래서 BC 결과를 PPO.load로 그대로 이어 쓴다.
   (수업 train_bc.py(11/16 지움)의 BCPolicy는 구조가 달라 PPO로 옮길 수 없다)
-- 손실: 가감속 평균 μ ↔ 시범 가감속 MSE + 차로 3범주(왼 · 유지 · 오) 교차 엔트로피(드문 차로 변경에 가중치) + 가치 V ↔ 시범의 할인 리턴 MSE.
+- 손실: 가감속 평균 μ  /  시범 가감속 MSE + 차로 3범주(왼 · 유지 · 오) 교차 엔트로피(드문 차로 변경에 가중치) + 가치 V  /  시범의 할인 리턴 MSE.
   가치까지 맞춰 두는 이유: RL 첫 업데이트에서 critic이 무작위면 advantage가 잡음이라 BC 정책이 바로 망가진다.
 - 시범 데이터: data_collection/collect_pomdp_data.py --policy sumo 의 NPZ (observation · action_raw · reward · terminated · truncated · episode).
-  보상은 수집할 때의 train.REWARD 값 — 보상을 바꾸면 시범을 다시 모아야 가치 초기화가 맞는다.
+  보상은 수집할 때의 train.REWARD 값 : 보상을 바꾸면 시범을 다시 모아야 가치 초기화가 맞는다.
 - 끝나면 log_std를 --log-std로 둔다 (기본 -1.6, σ ≈ 0.2): PPO 기본 탐험 폭(σ 0.61)이면 RL 시작부터 BC 행동이 크게 흔들린다.
 
 RL (rl):
 - 워커 프로세스마다 SUMO 하나(libsumo) + 정책 사본. 업데이트 1회 = 가중치를 보내고 워커마다 n_steps // 워커 수 스텝을
-  각자 모음(서로 기다리지 않음) → 워커별 GAE → 합쳐서 수업 PPO.update 그대로.
-  (11/16 검토 C5: 올림이면 2,051개 = 64 × 32 + 3 → 에폭마다 3개짜리 미니배치. 내림이면 2,044개)
+  각자 모음(서로 기다리지 않음)  /  워커별 GAE  /  합쳐서 수업 PPO.update 그대로.
+  (11/16 검토 C5: 올림이면 2,051개 = 64 × 32 + 3  /  에폭마다 3개짜리 미니배치. 내림이면 2,044개)
 - SUMO 오류 (11/16 검토 C3): 에피소드 도중 오류(ego 삽입 실패 등)가 나면 그 에피소드의 이번 rollout 부분만 버리고 SUMO를
   다시 띄운다. 연달아 실패하면 환경을 새로 만들고, 그래도 안 되면 워커가 오류를 알린다. 워커 프로세스가 죽거나 오류를 알리면
   부모가 그 워커만 새로 띄워 같은 rollout을 다시 시킨다 (업데이트마다 워커당 3번까지). 버린 수는 출력 · CSV `worker_errors`.
@@ -36,7 +36,7 @@ RL (rl):
 - 체크포인트: --save-every 업데이트마다 model_<스텝>.pt(+ training_log.csv 중간 저장), 끝나면 model.pt. 설정 사본(road_config ·
   mdp_config · training/train.py · 이 파일 · args.json). 끝날 때(오류 · Ctrl+C 포함) 모델 · 로그를 먼저 저장하고 워커를 정리한다.
 - 워커가 ROLLOUT_TIMEOUT_S 동안 응답이 없으면 멈춘 것으로 보고 다시 띄운다 (11/16 검토).
-- 학습 중에는 도로 폴더에 .in_use_<PID> 표시를 둔다 → 다른 프로세스가 다른 설정으로 build()하면 도로 파일을 하나도 안 바꾸고
+- 학습 중에는 도로 폴더에 .in_use_<PID> 표시를 둔다  /  다른 프로세스가 다른 설정으로 build()하면 도로 파일을 하나도 안 바꾸고
   오류 (road_builder.hold). 같은 설정이면 그대로 통과하므로 학습 중 같은 설정의 평가 · 영상은 괜찮다.
 """
 import argparse
@@ -61,7 +61,7 @@ END_KEYS = ["arrived", "collided", "red_light", "off_route", "stuck", "teleporte
 MAX_ENV_FAILS = 5        # 워커 안에서 연달아 실패하면 환경을 새로 만들고, 그 두 배면 부모에 알린다
 MAX_WORKER_RESTARTS = 3  # 업데이트 한 번에 워커 하나를 다시 띄우는 최대 횟수
 ROLLOUT_TIMEOUT_S = 900  # 워커가 이 시간(초) 안에 rollout을 못 돌려주면 멈춘 것으로 보고 다시 띄운다
-                         # (평소 업데이트당 rollout 약 15~20초 — 에피소드 재시작이 몇 번 겹쳐도 넉넉하게)
+                         # (평소 업데이트당 rollout 약 15~20초 : 에피소드 재시작이 몇 번 겹쳐도 넉넉하게)
 
 
 def _hparams(**over):
@@ -83,9 +83,9 @@ def _snapshot(run_dir, args):
         json.dump(vars(args), f, ensure_ascii=False, indent=1)
 
 
-# ══════════════════════════════════════════════════════════════════
+
 # BC
-# ══════════════════════════════════════════════════════════════════
+
 def load_demos(paths, gamma, arrived_only=()):
     """NPZ들을 읽어 (obs, accel, lane_idx, value_target, file_episode_key)."""
     obs, acc, lane, ret, key = [], [], [], [], []
@@ -104,16 +104,16 @@ def load_demos(paths, gamma, arrived_only=()):
             g[t] = run
         keep = np.ones(len(r), dtype=bool)
         if p in arrived_only and end is not None:
-            # [12팀 11/19] 선생님이 도착하지 못한 시범 판은 뺀다 (end_reason 1 = arrived). 조기 종료를 끈 뒤로 실패 판에는
+            # 선생님이 도착하지 못한 시범 판은 뺀다 (end_reason 1 = arrived). 조기 종료를 끈 뒤로 실패 판에는
             # "잘못된 차로 끝에 서서 정지 유지"가 수백 스텝씩 들어 있어, 그대로 배우면 틀린 차로에서 서 있기를 배운다.
-            # DAgger 파일(모델이 운전, 선생님 정답)에는 쓰지 않는다 — 실패 직전 상태의 정답이 필요하다.
+            # DAgger 파일(모델이 운전, 선생님 정답)에는 쓰지 않는다 : 실패 직전 상태의 정답이 필요하다.
             last = np.r_[ep[1:] != ep[:-1], True]
             ok = set(ep[last][end[last] == 1].tolist())
             keep = np.isin(ep, list(ok))
             print(f"[BC] {os.path.basename(p)}: 도착 못 한 판 {len(set(ep.tolist())) - len(ok)}개 · {int((~keep).sum()):,} 스텝 제외")
         obs.append(o.astype(np.float32)[keep])
         acc.append(a[:, 0].astype(np.float32)[keep])
-        lane.append((1 - np.round(a[:, 1])).astype(np.int64).clip(0, 2)[keep])   # 명령 +1/0/−1 → 인덱스 0/1/2 (HybridActorCritic.LANE_CMDS)
+        lane.append((1 - np.round(a[:, 1])).astype(np.int64).clip(0, 2)[keep])   # 차로 명령 +1·0·-1을 인덱스 0·1·2로 바꾼다.
         ret.append(g[keep])
         key.append((fi * 100000 + ep.astype(np.int64))[keep])
     return (np.concatenate(obs), np.concatenate(acc), np.concatenate(lane), np.concatenate(ret), np.concatenate(key))
@@ -143,7 +143,7 @@ def cmd_bc(args):
     w = torch.as_tensor(w / w[1], dtype=torch.float32, device=dev)                  # 유지 = 1
     T = lambda x: torch.as_tensor(x, device=dev)  # noqa: E731
     O, A, L, R = T(obs), T(acc), T(lane), T(ret)
-    # [12팀 11/19] 차로를 옮겨야 하는 상태(관측만으로 판정: 경로 방향 [31]·[33]으로 내 차로가 못 감 [35..38])에 표본 가중치.
+    # 차로를 옮겨야 하는 상태(관측만으로 판정: 경로 방향 [31]·[33]으로 내 차로가 못 감 [35..38])에 표본 가중치.
     # 이런 스텝은 전체의 몇 %뿐이라 손실에 묻혀, g1 · g2가 선생님의 "틈 만들기 감속"을 못 따라 해 경로 이탈로 끝났다 (side-banpo 12번 판 추적).
     # 기본 1.0이면 전과 같은 손실.
     SW = torch.ones(len(obs), dtype=torch.float32, device=dev)
@@ -157,16 +157,14 @@ def cmd_bc(args):
         SW = T(np.where(must, args.must_change_weight, 1.0).astype(np.float32))
         print(f"[BC] 차로를 옮겨야 하는 상태: {int(must.sum()):,} / {len(obs):,} ({must.mean():.1%}), 가중치 {args.must_change_weight}")
 
-    # [12팀 11/19 저녁] 달리는 중에 선생님이 감속하는 스텝의 가감속 손실 가중치 (--brake-weight, 기본 1 = 안 씀).
-    # g2 · L2의 남은 실패(신호 위반 · 합류/회전교차로 충돌)를 추적하면 전부 "선생님보다 덜 감속"이었고, 학습 데이터 안에서도
-    # 황색 앞 감속 스텝(전체의 0.15%)에서 선생님 평균 -0.38에 모델 -0.17이었다. 드문 감속 스텝이 손실에 묻히지 않게 한다.
-    # 조건: 정답 가감속 < --brake-thr(기본 -0.2) 이고 속도 > 2 m/s (서 있을 때의 정지 유지 -0.56은 제외). 차로 손실에는 안 쓴다.
+    # 희소한 제동 장면이 평균 손실에 묻히지 않도록 선생님의 감속 정답에 가중치를 준다.
+    # 주행 중의 가감속 손실에만 적용하며 정지 유지와 차로 손실은 제외한다.
     SWA = SW
     if args.brake_weight != 1.0:
         brake = (acc < args.brake_thr) & (obs[:, 0] * 22.22 > 2.0)
         if args.brake_scope == "no-lane":
-            # 차로를 옮겨야 하는 상태(관측 [31..38]로 판정)는 가중치에서 뺀다. 그 감속(틈 만들기)까지 강조하면 모델이 잘못된 차로에서
-            # 아예 서 버리고 다시 출발하지 못했다 (g2b4 측도-반포 23 · 27번 판: 분기 앞 3번 차로에서 450초 정지 → 시간초과)
+            # 차로 이동을 위한 감속까지 과하게 강조하면 잘못된 차로에 멈출 수 있다.
+            # 이 범위에서는 경로 방향에 맞춰 옮겨야 하는 상태를 감속 가중치에서 제외한다.
             if obs.shape[1] != 49:
                 raise SystemExit("--brake-scope no-lane은 관측 49차원 데이터에만 쓸 수 있습니다.")
             b1, b2 = obs[:, 31], obs[:, 33]
@@ -175,8 +173,8 @@ def cmd_bc(args):
             brake &= ~(((b1 != 0) & (k1 < 0.5)) | ((b2 != 0) & (k2 < 0.5)))
         SWA = SW * T(np.where(brake, args.brake_weight, 1.0).astype(np.float32))
         print(f"[BC] 달리는 중 감속 스텝: {int(brake.sum()):,} / {len(obs):,} ({brake.mean():.1%}), 가감속 손실 가중치 {args.brake_weight}")
-    # [12팀 11/19 밤] 선생님이 차로 변경을 참는 스텝의 차로 손실 가중치 (--hold-weight, 기본 1 = 안 씀).
-    # 대상: 차로를 옮겨야 하는 상태(관측 [31..38])인데 정답이 "유지"인 스텝 — 옮길 쪽 앞 · 뒤차 때문에 선생님이 기다리는 순간.
+    # 선생님이 차로 변경을 참는 스텝의 차로 손실 가중치 (--hold-weight, 기본 1 = 안 씀).
+    # 대상: 차로를 옮겨야 하는 상태(관측 [31..38])인데 정답이 "유지"인 스텝 : 옮길 쪽 앞 · 뒤차 때문에 선생님이 기다리는 순간.
     # BC 모델들이 이 스텝의 5~8%에서 변경 명령을 냈고, 환경 안전 게이트가 통과시킨 일부가 옆 차와 충돌했다
     # (r8b4n 새 시드 1,000판: 충돌 8판 중 7판이 올림픽대로에서 선생님이 참는 순간의 변경).
     SWL = SW
@@ -194,7 +192,7 @@ def cmd_bc(args):
     print(f"[BC] 파일 {len(paths)}개, transition {len(obs):,} (학습 {len(tr):,} / 검증 {len(va):,}, 에피소드 {len(eps)})")
     print(f"[BC] 차로 명령 수 (왼/유지/오): {cnt.astype(int).tolist()}, 손실 가중치 {np.round(w.cpu().numpy(), 1).tolist()}")
     opt = torch.optim.Adam(pol.parameters(), lr=args.lr)
-    # [12팀 11/19] --lr-decay: 학습률을 코사인으로 0.02배까지 낮춘다 (드문 상태의 가감속 오차를 끝까지 줄이려고 — 기본 끔 = 전과 같음)
+    # --lr-decay: 학습률을 코사인으로 0.02배까지 낮춘다 (드문 상태의 가감속 오차를 끝까지 줄이려고 : 기본 끔 = 전과 같음)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs, eta_min=args.lr * 0.02) if args.lr_decay else None
 
     def losses(idx):
@@ -248,13 +246,13 @@ def cmd_bc(args):
     print(f"     RL:   python -X utf8 training/train_team.py rl --init {os.path.relpath(model, BASE)}")
 
 
-# ══════════════════════════════════════════════════════════════════
-# RL — 병렬 워커
-# ══════════════════════════════════════════════════════════════════
-def _worker(remote, sumocfg, seed, safety, hp, depart=None):
-    """워커 프로세스: SUMO 환경 하나 + 정책 사본. ("rollout", (가중치, T)) → 이 워커가 T 스텝을 혼자 모아 돌려준다.
 
-    워커끼리 스텝을 맞추지 않는다 — 한 워커가 에피소드를 새로 시작(SUMO 재시작 + 배경 교통 흘려 두기, 수 초)해도
+# RL : 병렬 워커
+
+def _worker(remote, sumocfg, seed, safety, hp, depart=None):
+    """워커 프로세스: SUMO 환경 하나 + 정책 사본. ("rollout", (가중치, T))  /  이 워커가 T 스텝을 혼자 모아 돌려준다.
+
+    워커끼리 스텝을 맞추지 않는다 : 한 워커가 에피소드를 새로 시작(SUMO 재시작 + 배경 교통 흘려 두기, 수 초)해도
     다른 워커는 기다리지 않는다 (11/15: 스텝마다 맞추는 방식은 워커 7개로 60 스텝/초였다).
 
     SUMO 오류 (11/16 검토 C3): step · reset에서 예외가 나면 진행 중인 에피소드의 이번 rollout 부분을 버리고 SUMO를 다시
@@ -296,15 +294,15 @@ def _worker(remote, sumocfg, seed, safety, hp, depart=None):
         if st["fails"] % MAX_ENV_FAILS == 0:
             try:
                 st["env"].close()
-            except Exception:                 # noqa: BLE001 — 이미 망가진 SUMO 정리 실패는 무시
+            except Exception:                 # noqa: BLE001 : 이미 망가진 SUMO 정리 실패는 무시
                 pass
             st["env"] = make_env()
 
     def reset():
         while True:
             try:
-                return st["env"].reset(options=(depart or None))[0]   # [12팀 11/19] 출발 차로 · 속도 옵션 (--depart-lane · --depart-speed)
-            except Exception as e:            # noqa: BLE001 — SUMO 쪽 예외 종류가 traci/libsumo마다 다르다
+                return st["env"].reset(options=(depart or None))[0]   # 출발 차로 · 속도 옵션 (--depart-lane · --depart-speed)
+            except Exception as e:            # noqa: BLE001 : SUMO 쪽 예외 종류가 traci/libsumo마다 다르다
                 on_fail(e)
 
     try:
@@ -336,8 +334,8 @@ def _worker(remote, sumocfg, seed, safety, hp, depart=None):
                     ep_start = len(out["obs"])
                     continue
                 rr = r
-                if trunc and not term:            # 시간 제한으로 잘림 → 이어졌다면 받았을 가치로 보정. 수업 PPO는 잘림도
-                    rr += gamma * value(nxt)      # 실패처럼 0으로 끝내므로, 이 처리가 수업 코드보다 정확하다
+                if trunc and not term:            # 시간 제한으로 잘린 판은 다음 상태의 가치로 부트스트랩한다.
+                    rr += gamma * value(nxt)      # 실제 종료와 구분해 시간 제한에서 미래 가치를 버리지 않는다.
                 for k, x in (("obs", obs), ("actions", a), ("log_probs", float(lp.item())), ("rewards", rr),
                              ("values", float(v.item())), ("dones", float(term or trunc))):
                     out[k].append(x)
@@ -358,7 +356,7 @@ def _worker(remote, sumocfg, seed, safety, hp, depart=None):
             out["interventions"] = interventions
             out["errors"] = errors
             remote.send(out)
-    except Exception as e:                    # noqa: BLE001 — 부모에 알리고 끝냄 (부모가 이 워커를 새로 띄운다)
+    except Exception as e:                    # noqa: BLE001 : 부모에 알리고 끝냄 (부모가 이 워커를 새로 띄운다)
         import traceback
         try:
             remote.send({"error": repr(e) + "\n" + traceback.format_exc()[-1500:]})
@@ -414,7 +412,7 @@ class Workers:
                 try:
                     if self.remotes[i].poll(ROLLOUT_TIMEOUT_S):
                         o = self.remotes[i].recv()
-                    else:                                # 응답 없음 — SUMO가 예외 없이 멈춘 경우 (11/16 검토)
+                    else:                                # 응답 없음 : SUMO가 예외 없이 멈춘 경우 (11/16 검토)
                         o = {"error": f"워커 응답 없음 ({ROLLOUT_TIMEOUT_S} s)"}
                 except (EOFError, OSError) as e:         # 워커 프로세스가 죽음 (libsumo 치명 오류 등)
                     o = {"error": f"워커 프로세스 종료 ({e!r}, exitcode {self.procs[i].exitcode})"}
@@ -429,7 +427,7 @@ class Workers:
                 restarts += 1
                 try:
                     self.remotes[i].send(("rollout", (state_dict, T)))
-                except (BrokenPipeError, OSError):       # 새 워커가 곧바로 죽음 → 다음 recv에서 EOF로 처리
+                except (BrokenPipeError, OSError):       # 새 워커가 즉시 종료되면 다음 recv에서 EOF로 처리한다.
                     pass
         return outs, restarts
 
@@ -487,7 +485,7 @@ def critic_update(agent, anchor, returns, hp, anchor_coef):
 
 
 def teacher_update(agent, label, obs, hp, lr, epochs, brake_weight, lane_cap=5.0, lane_coef=0.5):
-    """[12팀 11/20] 선생님 보정 1회 (--teacher-lr): PPO 업데이트 직후, 이번 rollout의 관측에 선생님(규칙 정책) 정답을 매겨 BC 한 번.
+    """선생님 보정 1회 (--teacher-lr): PPO 업데이트 직후, 이번 rollout의 관측에 선생님(규칙 정책) 정답을 매겨 BC 한 번.
 
     PPO를 오래 돌리면 신호 위반은 줄지만 감속이 풀려 충돌이 늘었다 (P1 · P2 · Q · T5). 보상이 끄는 쪽은 PPO가, 감속은 선생님이
     잡게 한다. 손실은 BC와 같다: 가감속 MSE(달리는 중 감속 스텝 × brake_weight, 차로를 옮겨야 하는 상태 제외) + 0.5 × 차로 CE
@@ -565,7 +563,7 @@ def cmd_rl(args):
         road_dir, cwd = os.path.join(P.ROOT, "environment", "road"), os.getcwd()
         if road_dir not in sys.path:
             sys.path.insert(0, road_dir)
-        import check_env                      # 불러오며 작업 폴더를 바꾼다 → 되돌린다
+        import check_env                      # 규칙 정책을 불러오며 바뀐 작업 폴더를 복원한다.
         os.chdir(cwd)
         label = check_env.rule_policy(SumoHighwayEnv(cfg_path=sumocfg, road=ROAD, ego=EGO, mdp_sim=SIMULATION, mdp_obs=OBSERVATION,
                                                      action=ACTION, reward=REWARD, traffic=TRAFFIC))
@@ -593,7 +591,7 @@ def cmd_rl(args):
             advs, rts = [], []
             interventions = 0
             errors = restarts + sum(o["errors"] for o in outs)   # 버린 에피소드 조각 + 다시 띄운 워커
-            for o in outs:                        # 워커별 GAE → 합쳐서 수업 PPO.update 그대로
+            for o in outs:                        # 워커마다 GAE를 계산한 뒤 합쳐서 PPO.update에 전달한다.
                 b = RolloutBuffer()
                 for k in ("obs", "actions", "log_probs", "rewards", "values", "dones"):
                     getattr(b, k).extend(o[k])
@@ -663,7 +661,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("bc", help="SUMO 운전자 시범으로 PPO 정책 초기화")
-    b.add_argument("--data", nargs="+",   # 기본값은 절대 경로 — 어느 폴더에서 실행해도 같은 시범 데이터
+    b.add_argument("--data", nargs="+",   # 기본값은 절대 경로 : 어느 폴더에서 실행해도 같은 시범 데이터
                    default=[os.path.join(P.DATA, "baseline", "*.npz"), os.path.join(P.DATA, "bc_demo", "*.npz")])
     b.add_argument("--epochs", type=int, default=30)
     b.add_argument("--batch-size", type=int, default=512)

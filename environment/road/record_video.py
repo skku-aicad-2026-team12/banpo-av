@@ -6,8 +6,8 @@
     python -X utf8 environment/road/record_video.py --model results/<run>/model.pt   # 학습한 AV (PPO · BC 자동 판별)
     python -X utf8 environment/road/record_video.py --policy rule --safety           # 관측만 보는 규칙 정책, 안전장치 켬
 
-- 화면: AV를 따라가며 --zoom 확대 (기본 1500 — 시야 약 100 m). sumo-gui 창이 녹화하는 동안 떠 있다.
-- 시드는 evaluation/baseline.py 평가와 같은 식 (collect_pomdp_data.episode_seed) — 평가 에피소드 번호 그대로 다시 볼 수 있다.
+- 화면: AV를 따라가며 --zoom 확대 (기본 1500 : 시야 약 100 m). sumo-gui 창이 녹화하는 동안 떠 있다.
+- 시드는 evaluation/baseline.py 평가와 같은 식 (collect_pomdp_data.episode_seed) : 평가 에피소드 번호 그대로 다시 볼 수 있다.
 - 출력: environment/road/videos/<이름>.mp4 (프레임 PNG는 임시 폴더, 끝나면 지움). 영상 속도 = 실제 시간 × --speed.
 - 필요: ffmpeg (PATH). 수업 요구: 30초 이상, 도로 · HV · AV · 상호작용 · 목적지 도착이 보여야 한다.
 """
@@ -84,7 +84,7 @@ def main():
     try:
         np.random.seed(C.episode_seed(SEED[a.route], a.episode))
         opts = {"scenario": a.scenario, "route": a.route}
-        if a.depart_lane == "random":           # [12팀 11/21] collect_pomdp_data.py와 같은 옵션 · 같은 순서 → 같은 판
+        if a.depart_lane == "random":           # collect_pomdp_data.py와 같은 옵션 · 같은 순서  /  같은 판
             opts["depart_lane"] = "random"
         elif a.depart_lane != "best":
             opts["depart_lane"] = int(a.depart_lane)

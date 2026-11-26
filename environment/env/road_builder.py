@@ -1,9 +1,9 @@
-"""SUMO 도로 파일 자동 생성 — 12팀 반포대교 남단 도로망.
+"""SUMO 도로 파일 자동 생성 : 12팀 반포대교 남단 도로망.
 
 environment/road/road_spec.py(도로 정의)와 environment/env/road_config.py(시나리오 · AV 경로 · 교통 수요 · 버스)를 읽어
 environment/env/sumo/<network>/ 에 도로망 · 시나리오별 수요 · 정류소 · 화면 설정을 만들고 sumocfg 경로를 돌려준다.
 학습 · 평가 · 수집 · 화면 스크립트가 시작할 때마다 build()를 호출한다 (수업 구조 그대로).
-수업 원본의 직선 도로 생성 코드는 11/16 지웠다 — 12팀은 반포 도로망만 쓴다.
+수업 원본의 직선 도로 생성 코드는 11/16 지웠다 : 12팀은 반포 도로망만 쓴다.
 """
 import math
 import os
@@ -21,7 +21,7 @@ def build(road: dict, ego: dict, traffic: dict, out_dir: str) -> str:
         ego:     env.road_config.EGO     (AV 차량 속성)
         traffic: env.road_config.TRAFFIC (배경 교통 · 버스)
         out_dir: 생성 위치 (environment/env/sumo)
-    """
+"""
     if not road.get("network"):
         raise ValueError('ROAD["network"]가 없다 — 12팀 환경은 반포 도로망("banpo")만 지원한다 (environment/env/road_config.py)')
     return _build_network(road, ego, traffic, out_dir)
@@ -71,7 +71,7 @@ def _vtypes_block(traffic: dict):
             #   배경차가 자유롭게 돌아다니면 (측정: 150스텝에 477회 변경)
             #   차선 간 틈이 수시로 닫혀서, ego가 틈을 노려 파고드는
             #   "칼치기 추월"을 학습할 안정적인 기회 자체가 사라진다.
-            #   배경차가 차선을 유지하면 "느린 차 뒤 → 옆 틈으로 변경 →
+            #   배경차가 차선을 유지하면 "느린 차 뒤  /  옆 틈으로 변경  /
             #   가속"이라는 추월 패턴이 재현 가능한 형태로 나타난다.
             # 특정 컨트롤러만 돌아다니게 하려면 그 항목에 "keep_lane": False.
             if c.get("keep_lane", True):
@@ -92,8 +92,8 @@ def _vtypes_block(traffic: dict):
     return vtypes_block, flow_type
 
 
-# ══════════════════════════════════════════════════════════════════
-# 실제 도로망 (road["network"]이 있을 때) — 반포대교 남단 접속부
+
+# 실제 도로망 (road["network"]이 있을 때) : 반포대교 남단 접속부
 #
 # 도로 정의의 단일 원천은 environment/road/road_spec.py 이다 (직선·원호 + 실측 길이·차로).
 # 도로망은 하나다 (잠수교 포함). 보행화 전·후는 같은 도로에서
@@ -101,16 +101,16 @@ def _vtypes_block(traffic: dict):
 #   - 보행화 후에는 sumo_env가 에피소드 시작 때 잠수교 차로를 보행자 전용으로 바꾼다 (차량 통제).
 # 수요 파일에 들어가는 것:
 #   - AV 경로 (<route id="av_side-banpo"> …) : road_spec.AV_ROUTES 중 road["av_routes"], 그 시나리오에서 갈 수 있는 것
-#   - 배경 교통 (진입점 → 출구별 flow)  : traffic["od"]
+#   - 배경 교통 (진입점  /  출구별 flow)  : traffic["od"]
 # 화면: 높이 대역마다 같은 색 다각형으로 다시 그려 위아래를 고정 (둔치 층 < 지하 1층 < 지상 < 고가).
 # 결과: out_dir/<network>/
-# ══════════════════════════════════════════════════════════════════
-# 높이 대역 — 비슷한 높이의 도로는 같은 색 (environment/road/road_spec.py 층 높이 참고)
+
+# 높이 대역 : 비슷한 높이의 도로는 같은 색 (environment/road/road_spec.py 층 높이 참고)
 #   (이름, 하한 z, 상한 z, 면 색, 가장자리 색, layer)  · 지상(GROUND_COLOR)은 sumo-gui가 직접 그린다
-#   layer: sumo-gui 차로는 layer 5 밑에 그려진다 → 지하·둔치 다각형도 차로 위(5.2~5.4)에 그려 sumo-gui가
+#   layer: sumo-gui 차로는 layer 5 밑에 그려진다  /  지하·둔치 다각형도 차로 위(5.2~5.4)에 그려 sumo-gui가
 #   투명한 지하 차로에 남기는 선(차선 경계 점선의 검은 틈 등)을 가리고, 그 위를 지나는 도로는 _write_layers가
 #   겹치는 구간만 더 위(6.x)에 덧칠해 위아래를 맞춘다.
-# 색은 지도의 높이별 색(등고선 채색, hypsometric tint) 관례: 낮을수록 초록 → 노랑 → 높을수록 갈색.
+# 색은 지도의 높이별 색(등고선 채색, hypsometric tint) 관례: 낮을수록 초록  /  노랑  /  높을수록 갈색.
 GROUND_COLOR = "0,0,0"                                            # 지상 0 m: sumo-gui 기본 검정
 DECK_Z = 2.0                   # 이 높이(m) 이상 = 고가
 UNDER_Z = -3.0                 # 이 높이(m) 이하 = 지하·둔치 (원래 차로는 숨기고 다각형으로 다시 그림)
@@ -129,7 +129,7 @@ def _build_network(road: dict, ego: dict, traffic: dict, out_dir: str) -> str:
     학습 중에 다른 스크립트를 띄우면 실행 중인 워커가 쓰다 만 파일을 읽을 수 있었다. 이제
       1) 모든 파일을 out_dir 안 임시 폴더에 만들고 (도로망 입력 지문이 지금 것과 같으면 netconvert는 건너뛰고 지금 도로망을 복사),
       2) 지금 파일과 내용이 같으면 하나도 건드리지 않고, 다른 파일만 하나씩 os.replace로 통째 교체한다
-         (파일 단위 원자적 교체 — 읽는 쪽은 옛 파일이나 새 파일 전체 중 하나만 본다)."""
+         (파일 단위 원자적 교체 : 읽는 쪽은 옛 파일이나 새 파일 전체 중 하나만 본다)."""
     import shutil
     import tempfile
     net_dir = os.path.join(out_dir, road["network"])
@@ -167,7 +167,7 @@ def _same_file(a: str, b: str) -> bool:
 def _commit_dir(work: str, net_dir: str) -> list:
     """work의 파일 중 net_dir과 내용이 다른 것만 os.replace로 옮긴다. 바뀐 파일 이름 목록을 돌려준다.
     Windows는 다른 프로세스가 대상 파일을 열고 있는 순간 교체가 거부되므로(PermissionError) 잠깐씩 다시 시도한다.
-    도로망(net.xml)을 맨 나중에 바꾼다 — 새 수요 · 화면 파일이 옛 도로망과 섞이는 틈보다, 수요 파일의 엣지가 새 도로망에
+    도로망(net.xml)을 맨 나중에 바꾼다 : 새 수요 · 화면 파일이 옛 도로망과 섞이는 틈보다, 수요 파일의 엣지가 새 도로망에
     없을 때 SUMO가 시작에서 바로 오류를 내는 쪽이 안전하다 (도로망이 바뀌는 건 도로를 고칠 때뿐)."""
     import time
     os.makedirs(net_dir, exist_ok=True)
@@ -175,7 +175,7 @@ def _commit_dir(work: str, net_dir: str) -> list:
     changed = [n for n in names if not _same_file(os.path.join(work, n), os.path.join(net_dir, n))]
     # 전부 바꾸거나 하나도 안 바꾼다 (11/16 검토 E): SUMO는 시뮬레이션 내내 수요 파일(.rou.xml)을 열어 두므로, 학습 · 수집 중에
     # 도로 설정을 바꿔 build()를 부르면 그 파일만 교체가 거부된다. 앞 파일만 바뀐 채 멈추면 돌고 있는 워커가 다음 에피소드에서
-    # 새 · 옛 파일이 섞인 도로를 읽는다 → 먼저 바꿀 파일이 모두 풀려 있는지 보고, 잠긴 게 있으면 아무것도 안 바꾸고 알린다.
+    # 새 · 옛 파일이 섞인 도로를 읽는다  /  먼저 바꿀 파일이 모두 풀려 있는지 보고, 잠긴 게 있으면 아무것도 안 바꾸고 알린다.
     holders = _holders(net_dir) if changed else []
     if holders:
         # 학습(training/train_team.py rl)이 도는 동안: 수요 파일이 안 바뀌고 도로망만 바뀌는 설정(신호 시각표 등)은 잠김 검사로 못
@@ -205,7 +205,7 @@ def _commit_dir(work: str, net_dir: str) -> list:
 
 def _locked(path: str) -> bool:
     """다른 프로세스가 열고 있어 교체할 수 없는 파일이면 True (Windows: 열린 파일은 이름을 바꿀 수 없다). 없는 파일은 False.
-    잠깐 이름을 바꿨다 되돌려 본다 — 잠깐 읽기를 겹친 경우를 위해 0.1 s 간격으로 몇 번 다시 본다."""
+    잠깐 이름을 바꿨다 되돌려 본다 : 잠깐 읽기를 겹친 경우를 위해 0.1 s 간격으로 몇 번 다시 본다."""
     import time
     if not os.path.exists(path):
         return False
@@ -216,7 +216,7 @@ def _locked(path: str) -> bool:
         except PermissionError:
             time.sleep(0.1)
             continue
-        # 되돌리기는 반드시 성공해야 한다 (실패하면 원래 파일이 .lockcheck 이름으로 남아 SUMO가 못 연다 — 11/16 검토).
+        # 되돌리기는 반드시 성공해야 한다 (실패하면 원래 파일이 .lockcheck 이름으로 남아 SUMO가 못 연다 : 11/16 검토).
         # 백신 등이 막 바뀐 이름의 파일을 잠깐 잡을 수 있어 넉넉히 다시 시도한다.
         for k in range(100):
             try:
@@ -299,7 +299,7 @@ def _pid_alive(pid: int) -> bool:
 
 
 def _write_network(road: dict, ego: dict, traffic: dict, net_dir: str, live_dir: str):
-    """반포 도로망 파일 전부를 net_dir(임시 폴더)에 만든다. live_dir은 지금 쓰이는 폴더 — 도로망 지문이 같으면
+    """반포 도로망 파일 전부를 net_dir(임시 폴더)에 만든다. live_dir은 지금 쓰이는 폴더 : 도로망 지문이 같으면
     netconvert 대신 거기 있는 도로망을 복사한다."""
     import sys
     import shutil
@@ -346,7 +346,7 @@ def _write_network(road: dict, ego: dict, traffic: dict, net_dir: str, live_dir:
         if not av_lines:
             raise RuntimeError(f"시나리오 {scn}에서 쓸 수 있는 AV 경로가 없습니다: {road.get('av_routes')}")
 
-        # 배경 교통: 진입점마다 시간당 대수(vph) × 출구 비율 → 출구별 flow (무작위 도착)
+        # 배경 교통: 진입점마다 시간당 대수(vph) × 출구 비율  /  출구별 flow (무작위 도착)
         bg_lines = []
         for entry, spec in (traffic.get("od") or {}).items():
             if not net.hasEdge(entry) or entry in closed:
@@ -360,15 +360,15 @@ def _write_network(road: dict, ego: dict, traffic: dict, net_dir: str, live_dir:
                 rid = f"bg_{entry}__{ex}"
                 bg_lines.append(f'    <route id="{rid}" edges="{" ".join(p)}"/>')
                 # flow 하나는 초당 최대 1대(3,600 대/시)까지만 투입되므로, 큰 수요는 900 대/시 이하 flow 여러 개로 나눈다.
-                # 진입 차로는 "best"(경로를 차로 변경 없이 가장 멀리 갈 수 있는 차로 중 빈 곳) — 실제 차는 범위 밖에서 이미
+                # 진입 차로는 "best"(경로를 차로 변경 없이 가장 멀리 갈 수 있는 차로 중 빈 곳) : 실제 차는 범위 밖에서 이미
                 # 갈 차로에 서 있다. "free"(아무 빈 차로)로 넣으면 짧은 진입 도로에서 차로 변경이 몰려 입구가 막힌다
-                # (12팀 11/12: 김포 방향 투입 −15~25%, 신반포로 동행 우회전 전용 차로가 매 주기 막힘 → best로 해결).
+                # (12팀 11/12: 김포 방향 투입 −15~25%, 신반포로 동행 우회전 전용 차로가 매 주기 막힘  /  best로 해결).
                 k = max(1, math.ceil(vph / 900.0))
                 for j in range(k):
                     bg_lines.append(f'    <flow id="f_{entry}__{ex}_{j}" type="{flow_type}" route="{rid}" begin="0" end="1000000" '
                                     f'probability="{vph / k / 3600.0:.4f}" departLane="best" departSpeed="max"/>')
         # 버스: 노선마다 공식 배차간격(period)으로 투입. 경로는 bus_paths의 방향별 경로 키
-        #   (path = 전후 공통, before_path / after_path = 보행화 전후가 다름 — road_config._bus_lines)
+        #   (path = 전후 공통, before_path / after_path = 보행화 전후가 다름 : road_config._bus_lines)
         bus_lines, bus_flows = [], []   # 노선 경로 정의 / (출발 시각, flow)
         bus_stops = traffic.get("bus_stops") or {}
         bus_paths = traffic.get("bus_paths") or {}
@@ -382,11 +382,11 @@ def _write_network(road: dict, ego: dict, traffic: dict, net_dir: str, live_dir:
             for sid in stops:
                 if sid not in bus_stops or bus_stops[sid][0] not in edges:
                     raise RuntimeError(f"버스 {b['id']} 정류소 {sid}가 경로 위에 없음")
-            # 차량 id = 노선 + 진입·출구 (배경차 f_<진입>__<출구>와 같이 id만으로 목적지를 안다 — 따로 칼럼 없음)
+            # 차량 id = 노선 + 진입·출구 (배경차 f_<진입>__<출구>와 같이 id만으로 목적지를 안다 : 따로 칼럼 없음)
             bid = f'bus_{b["id"]}__{edges[0]}__{edges[-1]}'
             bus_lines.append(f'    <route id="{bid}" edges="{" ".join(edges)}"/>')
             stop_xml = "".join(f'<stop busStop="{sid}" duration="20"/>' for sid in stops)
-            # 화면: 노선 번호를 버스에 띄운다 (banpo.gui.xml vehicleText — 승용차에는 이 값이 없어 글자가 안 뜸)
+            # 화면: 노선 번호를 버스에 띄운다 (banpo.gui.xml vehicleText : 승용차에는 이 값이 없어 글자가 안 뜸)
             stop_xml = f'<param key="busLine" value="{b["id"]}"/>' + stop_xml
             begin = b.get("offset", 0)
             color = f' color="{b["color"]}"' if b.get("color") else ""   # 노선 유형 색 (road_config.BUS_COLORS)
@@ -395,18 +395,18 @@ def _write_network(road: dict, ego: dict, traffic: dict, net_dir: str, live_dir:
         if bus_lines:   # 버스 색은 노선 종류별로 flow에 붙인다 (_bus_lines)
             bg_lines = ['    <vType id="bus" vClass="bus" length="12" minGap="2.5" accel="1.2" decel="4.0" maxSpeed="16.7" '
                         'guiShape="bus"/>'] + bus_lines + bg_lines
-        # 보행자 (road_spec.PEDESTRIANS, 11/12): 보도 → 신호 횡단보도 → 보도. SUMO가 횡단보도 · 보도 경로를 찾는다
+        # 보행자 (road_spec.PEDESTRIANS, 11/12): 보도  /  신호 횡단보도  /  보도. SUMO가 횡단보도 · 보도 경로를 찾는다
         ped_lines = []
         for k, (pname, pfrom, pto, per_h, pscn) in enumerate(S.PEDESTRIANS):
             if (pscn and scn not in pscn) or not (net.hasEdge(pfrom) and net.hasEdge(pto)) or per_h <= 0:
                 continue
             # 출발 · 도착 보도가 한 교차로에 붙어 있으면 경로를 그 둘로 못박아 그 교차로 안(횡단보도)에서만 건너게 한다.
-            # from/to만 주면 SUMO가 가까운 다른 노드의 보행 구역(차도와 겹침)으로 돌아가는 경로를 고를 수 있다 —
+            # from/to만 주면 SUMO가 가까운 다른 노드의 보행 구역(차도와 겹침)으로 돌아가는 경로를 고를 수 있다 :
             # 잠수교남단(jx1)에서 4 m 옆 회전교차로 노드(rb_n)로 돌아가 차량과 충돌 (11/13 검증).
             ef, et = net.getEdge(pfrom), net.getEdge(pto)
             shared = {ef.getFromNode().getID(), ef.getToNode().getID()} & {et.getFromNode().getID(), et.getToNode().getID()}
             walk = f'<walk edges="{pfrom} {pto}"/>' if shared else f'<walk from="{pfrom}" to="{pto}"/>'
-            # end는 PED_END_S로 끊는다 — SUMO는 personFlow를 차량 flow와 달리 읽을 때 한꺼번에 펼쳐 만든다.
+            # end는 PED_END_S로 끊는다 : SUMO는 personFlow를 차량 flow와 달리 읽을 때 한꺼번에 펼쳐 만든다.
             # end=1000000이면 매 시작마다 보행자 30만 명을 만들어 시작에 34 s · 메모리 0.9 GB (11/14 측정, 6시간이면 1 s)
             ped_lines.append(f'    <personFlow id="ped_{k}" begin="0" end="{PED_END_S}" period="{3600.0 / per_h:.1f}" color="{PERSON_COLOR}">'
                              f'{walk}</personFlow>   <!-- {pname} -->')
@@ -434,14 +434,14 @@ def _write_network(road: dict, ego: dict, traffic: dict, net_dir: str, live_dir:
     with open(os.path.join(net_dir, "banpo.stops.xml"), "w", encoding="utf-8") as f:
         f.write("<additional>\n")
         for sid, (edge, lane, p0, p1, name) in (traffic.get("bus_stops") or {}).items():
-            # 버스전용 차선 = 파랑, 정류소 = 연한 파랑 (버스 차량 색은 노선 종류별 — 간선 파랑 · 지선 초록 · 광역 빨강 등, _bus_lines)
+            # 버스전용 차선 = 파랑, 정류소 = 연한 파랑 (버스 차량 색은 노선 종류별 : 간선 파랑 · 지선 초록 · 광역 빨강 등, _bus_lines)
             f.write(f'    <busStop id="{sid}" lane="{edge}_{S.net_lane(edge, lane)}" startPos="{p0}" endPos="{p1}" name="{name}" lines="bus" '
                     f'color="{BUS_STOP_COLOR}"/>\n')
         f.write("</additional>\n")
     gui_delay = float(SIMULATION.get("gui_delay", 100.0))
     with open(os.path.join(net_dir, "banpo.gui.xml"), "w", encoding="utf-8") as f:
         # laneEdgeMode 22 = "by height at geometry-segment start" (SUMO 1.27 기준): 높이로 색칠.
-        # 지하 1층(−8 < z ≤ UNDER_Z)은 투명 — 대신 _write_layers가 대역 색으로 지상 도로 밑에 다시 그린다.
+        # 지하 1층(−8 < z ≤ UNDER_Z)은 투명 : 대신 _write_layers가 대역 색으로 지상 도로 밑에 다시 그린다.
         # 둔치 층(z ≤ −8)은 불투명(둔치 색)으로 그리게 둔다: sumo-gui는 투명한 차로의 신호 막대(정지선 · 횡단보도 끝의
         # 빨강/초록)를 안 그려서 잠수교 횡단보도 신호가 안 보였다 (11/13). 차로 면은 위의 둔치 다각형(5.2)이 덮고,
         # 신호 막대는 다각형보다 위에 그려진다. 둔치 차로가 지상 도로 밑을 지나는 곳은 덮개(cover)가 지상 도로를 다시 칠한다.
@@ -474,9 +474,9 @@ def _write_network(road: dict, ego: dict, traffic: dict, net_dir: str, live_dir:
 </viewsettings>
 """)
 
-    # 4) sumocfg — 수요 파일 기본값은 보행화 전 (sumo_env가 에피소드마다 --route-files로 바꿈).
+    # 4) sumocfg : 수요 파일 기본값은 보행화 전 (sumo_env가 에피소드마다 --route-files로 바꿈).
     #    교차로 안 충돌도 검사한다 (기본값은 교차로 내부 충돌을 무시함).
-    #    차로 변경 시간 LC_DURATION (0 = SUMO 기본 순간 이동 — 11/14 팀 결정, LC_DURATION 주석). AV(ego)의 차로 변경도 같다.
+    #    차로 변경 시간 LC_DURATION (0 = SUMO 기본 순간 이동 : 11/14 팀 결정, LC_DURATION 주석). AV(ego)의 차로 변경도 같다.
     cfg_path = os.path.join(net_dir, "banpo.sumocfg")
     with open(cfg_path, "w", encoding="utf-8") as f:
         f.write(f"""<configuration>
@@ -524,16 +524,16 @@ def _band(z):
 
 
 GROUND_BAND = ("ground", UNDER_Z, DECK_Z, GROUND_COLOR, GROUND_COLOR, 5.6)
-LC_DURATION = 0.0               # 차로 변경 시간 (s). 0 = SUMO 기본(한 스텝에 옆 차로로 이동 — 화면에서 평행 이동처럼 보임).
+LC_DURATION = 0.0               # 차로 변경 시간 (s). 0 = SUMO 기본(한 스텝에 옆 차로로 이동 : 화면에서 평행 이동처럼 보임).
                                 # 팀 결정(11/14): 기본값 유지. 실측 평균 4.6 s(Toledo & Zohar 2007)는 반포대교 ③ 합류 뒤
                                 # 측면 충돌(4시간 × 3시드 약 30건)이 생겨 취소, sublane 모델은 더 나빴음(충돌 · 순간이동 36건 · 4배 느림)
 BUS_LINE_COLOR = "0,110,255"    # 버스전용 차로 차선 (파랑)
-BUS_STOP_COLOR = "130,180,255"  # 버스 정류소 (연한 파랑 — 정차한 버스가 정류소 색에 묻히지 않게)
-SIDEWALK_COLOR = "196,188,172"  # 보도 · 교차로 모퉁이 보행 구역 (보도블록 회베이지 — 검은 차도 · 초록 둔치 · 연녹 배경과 구분)
+BUS_STOP_COLOR = "130,180,255"  # 버스 정류소 (연한 파랑 : 정차한 버스가 정류소 색에 묻히지 않게)
+SIDEWALK_COLOR = "196,188,172"  # 보도 · 교차로 모퉁이 보행 구역 (보도블록 회베이지 : 검은 차도 · 초록 둔치 · 연녹 배경과 구분)
 CROSSING_COLOR = "255,255,255"  # 횡단보도 줄무늬
 CENTER_LINE_COLOR = "255,200,0" # 중앙선 (노랑, 반대 방향 도로가 붙은 곳)
-PED_END_S = 6 * 3600            # 보행자 flow 끝 시각 (s) — 에피소드(웜업 포함 약 11분) · check_long(4시간)보다 길게. 더 오래 돌리면 늘린다
-PERSON_COLOR = "120,30,150"     # 보행자 (진보라 — 밝은 보도 · 흰 줄무늬 위에서 보이고, 차량 색(노랑·하늘·주황·분홍)과 다름)
+PED_END_S = 6 * 3600            # 보행자 flow 끝 시각 (s) : 에피소드(웜업 포함 약 11분) · check_long(4시간)보다 길게. 더 오래 돌리면 늘린다
+PERSON_COLOR = "120,30,150"     # 보행자 (진보라 : 밝은 보도 · 흰 줄무늬 위에서 보이고, 차량 색(노랑·하늘·주황·분홍)과 다름)
 DASH = (6.0, 2.5, 5.5)          # sumo-gui 차선 경계 점선: 6 m 주기, 차로 시작부터 2.5~5.5 m 구간을 칠함 (화면 실측)
 
 
@@ -541,7 +541,7 @@ def _runs(shape):
     """(x,y,z) 점들을 높이 대역별 연속 구간으로 나눈다. 대역 경계(고가 2 m · 지하 −3 m · 둔치 −8 m)를
     지나는 정확한 지점에서 자르므로, 방향이 반대인 차로(북행·남행)도 같은 지점에서 색이 바뀐다.
 
-    반환: [(2D 폴리라인, 대역 — 지상은 GROUND_BAND, 차로 시작부터 거리, 앞 구간 대역,
+    반환: [(2D 폴리라인, 대역 : 지상은 GROUND_BAND, 차로 시작부터 거리, 앞 구간 대역,
            폴리라인에서 첫 원래 꼭짓점 위치)]"""
     pts, d = [], 0.0                              # (x, y, z, 차로 시작부터 거리, 잘린 점인가)
     for i, p in enumerate(shape):
@@ -608,7 +608,7 @@ def _center_lines(root, pts3, add):
     """중앙선(노란 실선): 반대 방향 도로가 바로 붙어 있는 구간(잠수교 등)의 경계에 그린다.
     각 도로의 가장 왼쪽 차량 차로 왼쪽 경계를 1 m마다 보고, 0.6 m 안에 반대 방향 도로의 왼쪽 경계가 있으면 중앙선."""
     STEP = 1.0
-    bounds = {}                                   # 엣지 → [(x, y, z, 진행 방향 단위벡터)]
+    bounds = {}                                   # 엣지  /  [(x, y, z, 진행 방향 단위벡터)]
     for e in root.iter("edge"):
         if e.get("function"):
             continue
@@ -667,15 +667,15 @@ def _write_layers(netf: str, out_path: str):
     sumo-gui 2D 화면은 도로를 높이와 상관없이 정해진 순서로 그려서, 지하 도로가 고가 위에
     그려지기도 한다. 다각형은 layer 값 순서대로 그려지고(지상 도로는 layer 1~5 사이), 차량은
     항상 맨 위에 그려진다. 그래서 층마다 다각형으로 다시 그려 위아래를 고정한다.
-      - 비슷한 높이의 도로는 같은 색 (BANDS) — 지도 높이별 색(hypsometric tint) 관례대로 낮을수록 초록,
+      - 비슷한 높이의 도로는 같은 색 (BANDS) : 지도 높이별 색(hypsometric tint) 관례대로 낮을수록 초록,
         높을수록 갈색: 한강 둔치 층(≤ −8 m, 진초록) < 지하 1층(−8 ~ −3 m, 연두) < 지상(sumo-gui 기본 검정)
         < 고가(≥ 2 m, 갈색). 경사로는 지나는 높이에 따라 색이 바뀐다. 서쪽 빈 곳에 범례.
       - 지하·둔치 원래 차로·교차로는 다각형으로 덮는다 (지하 1층 차로 · 지하·둔치 교차로는 화면 설정에서 투명, 둔치 차로는
-        신호 막대가 보이게 불투명 — 면은 다각형이 덮음). 다각형은 차로 위(layer 5.2~5.6)에
+        신호 막대가 보이게 불투명 : 면은 다각형이 덮음). 다각형은 차로 위(layer 5.2~5.6)에
         그린다. 그 위를 지나는 지상·지하 1층 도로는 겹치는 구간만 6.x에 덧칠하고, 고가 상판은 10.
-        → 지하차도가 올림픽대로 밑으로, 루프가 반포대교 밑으로 지나가는 것이 보인다.
+         /  지하차도가 올림픽대로 밑으로, 루프가 반포대교 밑으로 지나가는 것이 보인다.
     다각형 위에 가장자리선(실선)과 차선 경계선(sumo-gui와 같은 위상의 점선)을 다시 그린다.
-    """
+"""
     import xml.etree.ElementTree as ET
     root = ET.parse(netf).getroot()
 
@@ -695,7 +695,7 @@ def _write_layers(netf: str, out_path: str):
     def lane_lines(kind, run, d0, w, li, nl, edge_c, L, edges=True, right_ped=False):
         """차로 다각형 위 선: 양 끝 차로의 가장자리선(실선)과 차로 사이 경계(sumo-gui 위상의 점선).
         edges=False면 가장자리선은 생략 (지하·둔치·고가 본 그림은 underlay() · outline()이 바깥 테두리를 그린다).
-        right_ped: 오른쪽 차로가 보도 → 경계 점선 대신 색 차이로 구분."""
+        right_ped: 오른쪽 차로가 보도  /  경계 점선 대신 색 차이로 구분."""
         if edges and kind != "ground" and li == nl - 1:   # 가장 왼쪽 차로: 왼쪽 가장자리선
             add(kind + "_edge", edge_c, _offset(run, w / 2), False, L + 0.005, 0.35)
         if edges and kind != "ground" and li == 0:        # 가장 오른쪽 차로: 오른쪽 가장자리선
@@ -715,7 +715,7 @@ def _write_layers(netf: str, out_path: str):
         굵은 선과 달리 꺾이는 꼭짓점에 틈이 없다)."""
         add(kind + "_edge", edge_c, _offset(run, w / 2 + 0.4) + _offset(run, -(w / 2 + 0.4))[::-1], True, L - 0.01)
 
-    ped_areas = []                                     # (보행 구역 · 횡단보도) — 차로 다음에 따로 그림
+    ped_areas = []                                     # (보행 구역 · 횡단보도) : 차로 다음에 따로 그림
     for e in root.iter("edge"):
         lanes = e.findall("lane")
         fn = e.get("function")
@@ -729,9 +729,9 @@ def _write_layers(netf: str, out_path: str):
             ped = ln.get("allow") == "pedestrian"           # 보도 (sidewalk · 보행자 전용 길)
             right_ped = li > 0 and lanes[li - 1].get("allow") == "pedestrian"
             # 지상 구간은 sumo-gui가 그리지만 두 경우는 직접 그린다:
-            #  - 시작점이 투명(지하)인 차로는 sumo-gui가 통째로 건너뛴다 (루프 · 지하차도 남행) → 지상 구간 전부
-            #  - sumo-gui는 꼭짓점 사이 선분을 시작점 높이 색 하나로 칠한다 → 지하에서 올라와 지상으로 넘어가는
-            #    선분의 지상 쪽 나머지(경계 지점 ~ 다음 꼭짓점)가 투명하게 빈다 → 그 부분만
+            #  - 시작점이 투명(지하)인 차로는 sumo-gui가 통째로 건너뛴다 (루프 · 지하차도 남행)  /  지상 구간 전부
+            #  - sumo-gui는 꼭짓점 사이 선분을 시작점 높이 색 하나로 칠한다  /  지하에서 올라와 지상으로 넘어가는
+            #    선분의 지상 쪽 나머지(경계 지점 ~ 다음 꼭짓점)가 투명하게 빈다  /  그 부분만
             starts_under = _band(shape[0][2] if len(shape[0]) > 2 else 0.0) not in (None, BANDS[0])
             for run, band, d0, prev_b, k in _runs(shape):
                 kind, _, _, fill_c, edge_c, L = band
@@ -755,18 +755,18 @@ def _write_layers(netf: str, out_path: str):
                     underlay(kind, edge_c, run, w, L)
                 if not internal:
                     lane_lines(kind, run, d0, w, li, len(lanes), edge_c, L, edges=False, right_ped=right_ped)
-            # 버스전용 차로: 파란 차선 (양쪽 실선, 우리나라 중앙버스전용차로 표시) — sumo-gui 차로 위에 그린다
+            # 버스전용 차로: 파란 차선 (양쪽 실선, 우리나라 중앙버스전용차로 표시) : sumo-gui 차로 위에 그린다
             if not internal and "bus" in (ln.get("allow") or "").split() and "passenger" not in (ln.get("allow") or ""):
                 for side in (w / 2, -w / 2):
                     add("buslane", BUS_LINE_COLOR, _offset([(q[0], q[1]) for q in shape], side), False, 5.7, 0.2)
     _center_lines(root, pts3, add)
     # 위층 도로 덧칠: 아래층 도로와 겹치는 위층(지상·지하 1층) 도로 구간을 아래층 다각형보다 위
-    # layer(6.x)에 한 번 더 그린다 → 올림픽대로가 지하차도 위로 보인다.
+    # layer(6.x)에 한 번 더 그린다  /  올림픽대로가 지하차도 위로 보인다.
     # (고가는 이미 layer 10 상판)
     import collections
     rank = lambda z: 0 if z <= -8.0 else 1 if z <= UNDER_Z else 2 if z < DECK_Z else 3
     STEP = 0.5
-    samples, meta = {}, {}                        # 차로 id → [(x, y, 높이 순위)] (index × STEP = 차로 시작부터 거리)
+    samples, meta = {}, {}                        # 차로 id  /  [(x, y, 높이 순위)] (index × STEP = 차로 시작부터 거리)
     for e in root.iter("edge"):
         if e.get("function"):                  # 내부 차로 · 보행 구역 · 횡단보도 제외 (보행 구역 모양을 차로로 읽으면 검은 덩어리가 생김)
             continue
@@ -788,7 +788,7 @@ def _write_layers(netf: str, out_path: str):
     for lid, pts in samples.items():
         for x, y, r in pts:
             grid[(int(x // 6), int(y // 6))].append((x, y, r, lid))
-    # 아래층 교차로 모양도 겹침 판정에 넣는다 — 교차로가 위층 도로 밑까지 뻗으면 (갈래 · 합류가 비스듬하면 netconvert가 교차로를
+    # 아래층 교차로 모양도 겹침 판정에 넣는다 : 교차로가 위층 도로 밑까지 뻗으면 (갈래 · 합류가 비스듬하면 netconvert가 교차로를
     # 길게 늘림) 차로끼리는 안 겹쳐도 교차로 다각형이 위층 도로 위로 보인다 (11/13 und_j)
     low_juncs = []                                # (높이 순위, 꼭짓점, 경계 상자)
     for j in root.iter("junction"):
@@ -856,7 +856,7 @@ def _write_layers(netf: str, out_path: str):
                 kind, _, _, fill_c, edge_c, L = bds.pop()
                 p2 = [(q[0], q[1]) for q in p]
                 add(kind, fill_c, p2, True, L - 0.002)
-                if j.get("type") != "dead_end":       # 막다른 끝(지도 끝)은 테두리 없이 — 화면용 연장과 이어지게
+                if j.get("type") != "dead_end":       # 막다른 끝(지도 끝)은 테두리 없이 : 화면용 연장과 이어지게
                     outline(kind, edge_c, p2, L - 0.002)
     # 보행 구역(교차로 모퉁이 보도)은 보도 색, 횡단보도는 흰 줄무늬 (차도 방향과 나란한 0.5 m 폭 막대를 1 m 간격으로)
     for fn, ln in ped_areas:
@@ -888,7 +888,7 @@ def _write_layers(netf: str, out_path: str):
     # 글자는 sumo-gui 내장 글꼴에 한글이 없어 숫자·영어로 (한글 범례는 environment/road/README.md)
     legend = [("+6 m  elevated", BANDS[0][3]), ("0 m  ground", GROUND_COLOR),
               ("-3 to -8 m  slope", BANDS[1][3]), ("-10 m  riverside (Jamsu)", BANDS[2][3])]
-    NBSP = " "                   # POI ID에는 공백·쉼표를 못 쓴다 → 줄바꿈 없는 공백
+    NBSP = " "                   # POI ID에는 공백·쉼표를 못 쓴다  /  줄바꿈 없는 공백
     # 글자는 POI 위치에 가운데 정렬되므로 글자 폭(약 4.2 m/글자, poiName_size=120 기준)의 반만큼 오른쪽으로 민다
     pois = []
     for i, (label, c) in enumerate(legend):
@@ -902,7 +902,7 @@ def _write_layers(netf: str, out_path: str):
         f.write("<additional>\n" + "\n".join(polys + pois) + "\n</additional>\n")
 
 
-# ── 배경 (도로 이외 지역) — 화면 표시용, 주행에는 영향 없음 ──
+# ── 배경 (도로 이외 지역) : 화면 표시용, 주행에는 영향 없음 ──
 # 실제 지도와 모양이 다르다: 도로를 직선·원호로 단순화했으므로 배경도 우리 좌표에 맞춰 직접 그린다 (위치는 대략).
 # 색은 도로 색과 겹치지 않게 옅게: 물 = 회색빛 하늘색, 녹지 = 아주 연한 초록, 시가지 = 연한 회색
 # (파랑은 버스, 초록·연두는 둔치·경사로 도로, 갈색은 고가가 이미 쓴다)
@@ -915,7 +915,7 @@ BG_PARKING = "205,205,200"
 
 
 def _write_background(S, out_path: str):
-    """한강 · 세빛섬 · 반포한강공원 · 올림픽대로 중앙녹지 · 시가지 블록 · 지명·도로명 (영어 — sumo-gui 글꼴에 한글 없음)."""
+    """한강 · 세빛섬 · 반포한강공원 · 올림픽대로 중앙녹지 · 시가지 블록 · 지명·도로명 (영어 : sumo-gui 글꼴에 한글 없음)."""
     x0, x1 = S.X_W, S.X_WB_IN                       # 올림픽대로 양 끝
     wb_top = S.WB4 + 5 * S.W                        # 김포 방향 가장 바깥 차로 끝
     river = S.RC[1] + S.RR + 33                     # 둔치 끝 = 강가 (회전교차로 북쪽 약 33 m)
@@ -938,7 +938,7 @@ def _write_background(S, out_path: str):
         ("sebit_2", BG_ISLAND, rect(-110, river + 23, -84, river + 51)),
         ("sebit_3", BG_ISLAND, rect(-76, river + 15, -58, river + 37)),
     ]
-    labels = [  # (글자, x, y) — 글자는 POI 위치에 가운데 정렬
+    labels = [  # (글자, x, y) : 글자는 POI 위치에 가운데 정렬
         ("Han River", 330, river + 110),
         ("Sebitseom", -104, river + 66),
         ("Parking", -185, (S.RC[1] + 26 + river - 3) / 2),

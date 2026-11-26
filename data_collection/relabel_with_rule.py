@@ -1,12 +1,7 @@
-"""[12팀 11/19] 시범 · DAgger NPZ의 행동 정답(action_raw)을 지금의 규칙 정책(선생님)으로 다시 매긴다.
+"""시범·DAgger NPZ의 action_raw를 현재 규칙 정책의 정답으로 다시 매긴다.
 
-선생님(environment/road/check_env.py rule_policy)은 관측만 보고 행동을 정하는 함수라, 저장된 관측에 그대로 다시 적용할 수 있다
-(SUMO를 띄우지 않는다). 선생님을 고친 뒤 옛 데이터의 정답을 새 선생님과 맞출 때 쓴다 — 같은 상태에 정답이 두 가지로 섞이지
-않게. 바뀌는 것은 action_raw 하나뿐이고, 관측 · 보상 · 종료 · 나머지 칼럼은 그대로다 (주행 궤적은 옛 선생님 · 옛 모델의 것).
-
-    python -X utf8 data_collection/relabel_with_rule.py --out-dir data/bc_demo_b/r8 data/bc_demo_b/g_dagger2.npz …
-
-출력: <out-dir>/<같은 파일 이름>. BC 학습용 NPZ만 다룬다 (JSONL은 건드리지 않는다 — 제출용 데이터가 아니다).
+SUMO를 실행하지 않고 저장된 관측을 check_env.rule_policy에 넣는다.
+다른 배열은 보존하고 --out-dir에 같은 파일명으로 저장한다. JSONL은 수정하지 않는다.
 """
 import argparse
 import glob
@@ -35,7 +30,7 @@ def main():
     sumocfg = road_builder.build(C.ROAD, C.EGO, C.TRAFFIC, P.SUMO_DIR)
     env = SumoHighwayEnv(cfg_path=sumocfg, road=C.ROAD, ego=dict(C.EGO, sumo_driver=False), mdp_sim=C.SIMULATION,
                          mdp_obs=C.OBSERVATION, action=C.ACTION, reward=C.REWARD, traffic=C.TRAFFIC, gui=False)   # SUMO는 띄우지 않는다
-    label = C._rule_policy(env)          # check_env를 불러오며 작업 폴더가 저장소 루트로 바뀐다 → 경로는 위에서 절대 경로로
+    label = C._rule_policy(env)          # check_env를 불러오며 작업 폴더가 저장소 루트로 바뀐다  /  경로는 위에서 절대 경로로
     os.makedirs(out_dir, exist_ok=True)
     for p in paths:
         d = dict(np.load(p))

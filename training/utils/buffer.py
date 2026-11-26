@@ -2,11 +2,11 @@
 
 강화학습 알고리즘은 크게 두 부류이고, 쓰는 버퍼도 다르다:
 
-  · on-policy  (PPO, A2C, ...)  → RolloutBuffer
+  · on-policy  (PPO, A2C, ...)   /  RolloutBuffer
       "지금 정책"으로 모은 경험만 쓸 수 있다.
       업데이트가 끝나면 데이터를 전부 버리고 새로 모은다.
 
-  · off-policy (DQN, SAC, ...)  → ReplayBuffer
+  · off-policy (DQN, SAC, ...)   /  ReplayBuffer
       과거 정책이 모은 경험도 재사용할 수 있다.
       큰 순환 버퍼에 계속 쌓아두고 무작위로 뽑아 학습한다.
 
@@ -36,7 +36,7 @@ class RolloutBuffer:
         log_prob : 그 행동을 뽑을 당시의 log π_old(a|s).
                    PPO의 확률비 r(θ) 계산에 필요해서 함께 저장한다.
         value    : 그 상태의 V(s) 추정치. GAE 계산에 필요.
-    """
+"""
 
     def __init__(self):
         self.clear()
@@ -61,15 +61,15 @@ class RolloutBuffer:
         """GAE(λ)로 advantage와 return(critic 타깃)을 계산한다.
 
             δ_t = r_t + γ·V(s_{t+1})·(1-done) - V(s_t)
-            A_t = δ_t + (γλ)·(1-done)·A_{t+1}     ← 뒤에서 앞으로 재귀
+            A_t = δ_t + (γλ)·(1-done)·A_{t+1}       뒤에서 앞으로 재귀
             R_t = A_t + V(s_t)
 
         Args:
             last_value: rollout 마지막 상태의 V(s). 에피소드가 중간에
                 끊긴 경우 그 이후의 가치를 부트스트랩하는 데 쓴다.
         Returns:
-            (advantages, returns) — 둘 다 np.ndarray, 길이 T
-        """
+            (advantages, returns) : 둘 다 np.ndarray, 길이 T
+"""
         rewards = np.asarray(self.rewards, dtype=np.float32)
         values = np.asarray(self.values, dtype=np.float32)
         dones = np.asarray(self.dones, dtype=np.float32)
@@ -108,7 +108,7 @@ class ReplayBuffer:
     (s, a, r, s', done) 전이를 capacity까지 쌓고, 가득 차면
     가장 오래된 것부터 밀어낸다. sample()로 무작위 미니배치를 뽑는다.
     무작위 샘플링은 연속된 전이 사이의 상관관계를 깨서 학습을 안정화한다.
-    """
+"""
 
     def __init__(self, capacity: int = 100_000, seed: int = 0):
         self.buffer = deque(maxlen=capacity)

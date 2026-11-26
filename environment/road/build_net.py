@@ -1,4 +1,4 @@
-"""road_spec.py → SUMO 입력 XML(.nod/.edg/.con) → netconvert → .net.xml
+"""road_spec.py  /  SUMO 입력 XML(.nod/.edg/.con)  /  netconvert  /  .net.xml
 
 사용:
     python -X utf8 environment/road/build_net.py                 # 두 시나리오(before, after) 모두, 신호 5곳(C-ITS 실측) 포함
@@ -58,7 +58,7 @@ def write_xml(outdir, scn):
                      f'spreadType="{e["spread"]}" shape="{shape_str(shape_3d(e))}" name="{escape(e["name"])}"')
             if e.get("priority") is not None:
                 attrs += f' priority="{e["priority"]}"'
-            if e["id"] in S.SIDEWALKS:                      # 보도 (0번 차로로 붙고 차량 차로 번호가 1씩 밀린다 — 연결은 아래에서 맞춤)
+            if e["id"] in S.SIDEWALKS:                      # 보도 (0번 차로로 붙고 차량 차로 번호가 1씩 밀린다 : 연결은 아래에서 맞춤)
                 attrs += f' sidewalkWidth="{S.SIDEWALK_WIDTH}"'
             if e["lane_attrs"]:
                 f.write(f"    <edge {attrs}>\n")
@@ -107,7 +107,7 @@ def netconvert(outdir):
            "--offset.disable-normalization", "true",   # spec 좌표 그대로
            "--default.lanewidth", str(S.W),
            "--junctions.corner-detail", "5",
-           # 차도는 보행 금지 — 보행자는 보도(sidewalkWidth) · 보행자 전용 길 · 횡단보도로만. 이 옵션이 없으면 모든 차로가
+           # 차도는 보행 금지 : 보행자는 보도(sidewalkWidth) · 보행자 전용 길 · 횡단보도로만. 이 옵션이 없으면 모든 차로가
            # 보행 가능이라 netconvert가 교차로마다 차도와 겹치는 보행 구역(walkingarea)을 만들어(52개) 보행자가 차도로 다닐 수
            # 있었고, 화면에서도 회전교차로 등에 덩어리 모양이 생겼다 (11/13). 보행화 후 잠수교는 sumo_env가 실행 중에 보행 허용.
            "--default.disallow", "pedestrian",

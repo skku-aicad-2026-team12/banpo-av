@@ -1,8 +1,8 @@
 {
  "cmd": "rl",
- "init": "results/team_bc_1119_r8b4n/model.pt",
+ "init": "results/team_rl_1124_VA/model.pt",
  "envs": 7,
- "timesteps": 600000,
+ "timesteps": 300000,
  "lr": 5e-05,
  "n_steps": 8176,
  "critic_warmup": 8,
@@ -18,5 +18,5 @@
  "save_every": 6,
  "seed": 0,
  "device": "cpu",
- "name": "team_rl_1120_U5"
+ "name": "team_rl_1125_VA2"
 }

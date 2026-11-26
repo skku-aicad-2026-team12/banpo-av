@@ -1,70 +1,28 @@
-"""POMDP trajectory data collector for the SUMO highway environment.
+"""부분관측 정책의 SUMO 주행 데이터를 JSONL.gz와 NPZ로 수집한다.
 
-저장 단위는 POMDP transition 하나다:
-    (o_t, a_t, r_t, o_{t+1}, terminated, truncated, s_t, s_{t+1})
+한 행은 관측·행동·보상·다음 관측·종료 여부와 관측 시점의 시뮬레이터 상태다.
+49차원 관측과 정책 설정은 environment/env/mdp_config.py, 보상은 training/train.py를 따른다.
+시뮬레이터 전체 상태는 정책 입력으로 쓰지 않고 분석용으로 저장한다.
 
-- o_t / o_{t+1}: agent가 실제로 보는 부분관측 (11/17부터 43차원 = 수업 원본 31 + 12팀 경로 2 · 신호 2 + 선택 관측 7 + 신호 남은 시간 1, 11/19부터 + 둘째 분기 · 차로 진행 방향 6 = 49차원(lane_dir_obs) — environment/env/mdp_config.py OBSERVATION)
-- a_t: [가감속 raw, 차선변경 raw]
-  ([12팀 11/17] --label-policy rule이면 action_raw는 실행한 행동이 아니라 규칙 정책이 그 관측에서 냈을 행동 = DAgger 정답.
-   action.* 칼럼은 실제 실행한 행동 그대로. BC 시범 전용 — 최종 데이터 수집에는 쓰지 않는다)
-- lane_change: 실제 환경에 적용된 {-1, 0, +1}
-- s_t / s_{t+1}: SUMO 내부의 privileged simulator state.
-  정책 입력에는 쓰지 않고 데이터 검증/representation/belief 학습용으로만 저장한다.
+JSONL의 실수는 --ndigits 자리로 반올림하고 NPZ는 float32 값을 유지한다.
+JSONL 중간 행의 next_observation·next_state는 다음 행으로 복원한다.
+종료 행에는 두 값을 직접 기록하며 iter_transitions()가 읽을 때 채운다.
+NPZ의 detected_xy는 좌표를 이어 붙인 배열이고 detected_offsets로 행을 구분한다.
 
-용량을 줄이기 위해:
-- JSONL은 gzip으로 압축해서 쓰고(.jsonl.gz), observation/state/detected_vehicles의
-  float는 --ndigits 자리로 반올림한다 (NPZ는 float32 그대로).
-- next_observation / next_state는 다음 레코드의 observation / state와 같으므로
-  에피소드 마지막 스텝(terminated or truncated)에만 기록한다.
-  읽을 때는 iter_transitions()가 채워서 돌려준다.
-- NPZ의 감지 차량 좌표는 object 배열(pickle) 대신 flat (M, 2) + offsets로 저장한다.
+--label-policy rule은 실행 행동 대신 선생님 정답을 action_raw에 기록하는 DAgger용이다.
+JSONL action 필드에는 실제 실행 행동이 남는다. 최종 수집에는 이 옵션을 쓰지 않는다.
+경로·신호·종료 원인 코드표는 아래 상수에 정의한다. scenario는 ego_route로 구한다.
+sim_time은 예열과 AV 투입 대기를 포함한 시뮬레이션 시각으로, 판별 t와 다르다.
 
-속도:
-- headless면 sumo_env가 libsumo(in-process SUMO)를 써서 TraCI 소켓 왕복이 사라진다
-  (pip install libsumo). --workers N으로 SUMO 인스턴스 N개를 병렬로 돌려 더 줄인다.
-- [12팀 수집 최적화, 11/12] 반포 도로망(차량 약 450대)에서 측정:
-  state 조회를 TraCI 구독으로 바꾸고(environment/env/sumo_env.py get_privileged_state) libsumo를 연결해
-  에피소드 1개 212 s → 11 s (약 19배), 8 워커 83 step/s. 같은 시드에서 JSONL·NPZ가 바이트 단위로 같음을 확인
-  (1 에피소드, 그리고 4 에피소드 · 시나리오 섞음 · 2 워커). SUMO_LIBSUMO=0이면 기존 TraCI.
-- 용량: transition당 약 12 kB (gzip 6, 기준 지표 데이터 실측 11.9 kB). 10^7개면 약 119 GB.
-
-[12팀 추가 칼럼] (기존 칼럼은 그대로, 기존 칼럼으로 계산할 수 없는 것만 추가)
-11/17 조교 공지("String보다 숫자, 신호 칼럼은 차원을 쪼개서")에 따라 JSONL도 NPZ와 같은 숫자 코드로 저장한다 (코드표는 아래 *_CODES).
-- (scenario 칼럼은 11/19에 뺐다 — ego_route로 정해진다: 잠수교행 = 보행화 전, 반포대교행 = 보행화 후.
-   필요하면 route_scenario(ego_route)로 구한다 (road_spec.AV_ROUTES[...]["scenarios"]). 그 전 파일에는 scenario 코드가 있다)
-- sim_time           : 관측 시점 t의 시뮬레이션 시각 (s, traci.simulation.getTime — env.get_sim_time). 신호 5곳은 고정 주기라
-                       이 값으로 모든 신호 상태를 계산할 수 있다 (AV 앞 신호만 있는 signal_* 보완). t로는 못 구한다 —
-                       예열 180 s와 AV 투입 대기가 판마다 다름 (11/19)
-- ego_route          : AV 경로 = 목적지 (ROUTE_CODES — 0 측도 → 반포대교 · 1 고가 → 반포대교 · 2 고가 → 지하차도 → 잠수교
-                       · 3 올림픽대로 → 주차장 램프 → 잠수교 · 4 신반포로 → 반포대교)
-- signal_tls         : 관측 시점 t에 AV가 다음에 만날 신호 (SIGNAL_TLS_CODES, -1 = 앞에 신호 없음)
-- signal_state       : 그 신호의 AV 방향 색 — 녹 1 · 황 0.5 · 적 0 · 꺼짐/없음 -1 (SIGNAL_STATE_VALUES)
-- signal_remaining_s : 그 색이 바뀔 때까지 s (꺼짐 · 없음 · 안 바뀜 = null). 세 칼럼 모두 privileged state — 정책 입력 아님
-                       (environment/env/sumo_env.py get_signal_state. 11/17 전 수집분은 dict 칼럼 signal {tls, state, remaining_s})
-- end_reason         : 종료 원인 (END_REASON_CODES — 0 진행 중 · 1 arrived · 2 collided · 3 off_route · 4 stuck · 5 teleported ·
-                       6 timeout · 7 other · 8 red_light)
-- --policy sumo : SUMO 기본 운전자가 AV를 운전 (전문가 시연). --scenario / --route로 고정 가능
+TraCI 구독으로 차량 상태를 묶어 읽고, 화면 없는 실행에는 libsumo를 사용한다.
+--workers로 SUMO 인스턴스를 병렬 실행한다. --paired-seeds는 판마다 교통 시드를 고정한다.
 
 예시:
-    python data_collection/collect_pomdp_data.py --episodes 100
-    python data_collection/collect_pomdp_data.py --episodes 10 --gui
-    python data_collection/collect_pomdp_data.py --policy keep-lane --episodes 20
-    python data_collection/collect_pomdp_data.py --model results/run_xxx/model.pt --episodes 100   # 학습한 PPO로 수집
-    python data_collection/collect_pomdp_data.py --model results/run_xxx/model.pt --stochastic    # 샘플링 행동
-    python data_collection/collect_pomdp_data.py --episodes 200 --workers 8   # SUMO 8개 병렬 수집
+    python -X utf8 data_collection/collect_pomdp_data.py --episodes 100 --workers 8
+    python -X utf8 data_collection/collect_pomdp_data.py --model results/run/model.pt --episodes 100
 
-출력:
-    data/pomdp_YYYYMMDD_HHMMSS.jsonl.gz
-    data/pomdp_YYYYMMDD_HHMMSS.npz
-
-읽기:
-    from collect_pomdp_data import iter_transitions
-    for rec in iter_transitions("data/pomdp_....jsonl.gz"):
-        rec["observation"], rec["next_observation"], rec["state"], rec["next_state"], ...
-
-    d = np.load("data/pomdp_....npz")          # allow_pickle 불필요
-    off = d["detected_offsets"]
-    xy_i = d["detected_xy"][off[i]:off[i + 1]]  # 스텝 i의 감지 차량 (N_i, 2)
+출력: data/<name>.jsonl.gz, data/<name>.npz
+읽기: iter_transitions(path) 또는 np.load(path, allow_pickle=False)
 """
 import argparse
 import gzip
@@ -88,19 +46,19 @@ from train import HPARAMS, REWARD  # 학습과 같은 보상 조건 + PPO 네트
 
 BASE = P.ROOT   # 저장소 루트 (data/는 루트에)
 
-# [12팀 추가 칼럼] 코드표 — JSONL · NPZ 모두 이 숫자로 저장 (11/17부터. 그 전 JSONL은 문자열)
-SCENARIO_CODES = {"before": 0, "after": 1}                       # 잠수교 보행화(차량 통제) 전 / 후 (11/19부터 칼럼 없음 — 옛 파일 읽기용)
+# 코드표 : JSONL · NPZ 모두 이 숫자로 저장 (11/17부터. 그 전 JSONL은 문자열)
+SCENARIO_CODES = {"before": 0, "after": 1}                       # 잠수교 보행화(차량 통제) 전 / 후 (11/19부터 칼럼 없음 : 옛 파일 읽기용)
 ROUTE_CODES = {"side-banpo": 0, "goga-banpo": 1, "goga-jamsu": 2, "oly-jamsu": 3, "sbr-banpo": 4}   # environment/road/road_spec.py AV_ROUTES
 SIGNAL_TLS_CODES = {"ix": 0, "xw": 1, "s4032": 2, "jx1": 3, "jx2": 4}            # environment/road/road_spec.py SIGNALS (-1 = 앞에 신호 없음)
-# 신호색 (SUMO 신호 문자 → 값): 녹 1 · 황 0.5 · 적 0 · 꺼짐 -1, 앞에 신호 없음도 -1 (11/17 조교 공지 예시 {R, Y, G} → {0, 0.5, 1})
+# 신호색 (SUMO 신호 문자  /  값): 녹 1 · 황 0.5 · 적 0 · 꺼짐 -1, 앞에 신호 없음도 -1 (11/17 조교 공지 예시 {R, Y, G}  /  {0, 0.5, 1})
 SIGNAL_STATE_VALUES = {"G": 1.0, "g": 1.0, "y": 0.5, "Y": 0.5, "r": 0.0, "R": 0.0, "s": 0.0, "u": 0.0, "O": -1.0, "o": -1.0}
 END_REASON_CODES = {None: 0, "arrived": 1, "collided": 2, "off_route": 3,
                     "stuck": 4, "teleported": 5, "timeout": 6, "other": 7,
-                    "red_light": 8}   # 0 = 진행 중. red_light = 적색 신호에 정지선 통과 (11/15 추가 — 기존 값은 그대로)
+                    "red_light": 8}   # 0 = 진행 중. red_light = 적색 신호에 정지선 통과 (11/15 추가 : 기존 값은 그대로)
 
 
 def route_scenario(route):
-    """[12팀 11/19] AV 경로(이름 또는 ROUTE_CODES 숫자) → 시나리오 이름 (road_spec.AV_ROUTES[...]["scenarios"]가 하나일 때만, 아니면 None).
+    """AV 경로(이름 또는 ROUTE_CODES 숫자)  /  시나리오 이름 (road_spec.AV_ROUTES[...]["scenarios"]가 하나일 때만, 아니면 None).
     scenario 칼럼을 뺀 뒤 파일을 읽는 쪽이 시나리오가 필요하면 이것으로 구한다."""
     if isinstance(route, (int, np.integer)) and not isinstance(route, bool):
         route = {v: k for k, v in ROUTE_CODES.items()}.get(int(route))
@@ -122,9 +80,9 @@ def episode_seed(base: int, ep: int) -> int:
 def detect_algorithm(model_path: str) -> str:
     """model.pt가 어느 학습 스크립트 출력인지 파일 내용으로 판별한다.
 
-    training/train.py · training/train_team.py(PPO, BC 포함) : policy.state_dict()를 그대로 저장 → 텐서만 있는 dict
-    수업 train_bc.py(BC, 11/16 지움): {"algorithm": "bc", "state_dim", ..., "state_dict"} dict — 예전 파일 호환용
-    """
+    training/train.py · training/train_team.py(PPO, BC 포함) : policy.state_dict()를 그대로 저장  /  텐서만 있는 dict
+    수업 train_bc.py(BC, 11/16 지움): {"algorithm": "bc", "state_dim", ..., "state_dict"} dict : 예전 파일 호환용
+"""
     import torch
     ck = torch.load(model_path, map_location="cpu", weights_only=True)
     return "bc" if isinstance(ck, dict) and ck.get("algorithm") == "bc" else "ppo"
@@ -135,7 +93,7 @@ def make_policy(args, env, worker_seed: int):
 
     ppo / bc 출력은 [-1, 1]로 클리핑해 저장한다. 환경의 입력 범위와 같아서
     이 데이터로 바로 BC(training/train_team.py bc)를 돌릴 수 있다.
-    """
+"""
     if args.policy == "ppo":
         # 수업 test.py(11/16 지움)와 같은 방식: training/train.py의 HPARAMS로 같은 구조를 만든 뒤 가중치만 덮어쓴다.
         # seed는 워커마다 다르게 (--stochastic 샘플링이 워커 간에 겹치지 않도록).
@@ -160,13 +118,13 @@ def make_policy(args, env, worker_seed: int):
         return act
 
     if args.policy == "rule":
-        # [12팀 11/17] 관측만 보고 운전하는 규칙 정책 (environment/road/check_env.py rule_policy) — BC 시범 · DAgger 정답.
+        # 관측만 보고 운전하는 규칙 정책 (environment/road/check_env.py rule_policy) : BC 시범 · DAgger 정답.
         # 5조합 × 30회 안전장치 끔: 도착 99.3% · 충돌 0.7% · 신호 위반 0, 앞차 최소 간격 약 12 m
-        # (SUMO 운전자는 앞차 뒤 2.5 m = 충돌 판정 경계에 서서 BC 시범으로 부적합 — docs/프로젝트_기록.md 부록 #65).
+        # (SUMO 운전자는 앞차 뒤 2.5 m = 충돌 판정 경계에 서서 BC 시범으로 부적합 : docs/프로젝트_기록.md §12.6).
         return _rule_policy(env)
 
     if args.policy == "sumo":
-        # [12팀 추가] SUMO 기본 운전자가 AV를 운전 (신호·양보·차선 선택을 지키는 전문가 시연).
+        # SUMO 기본 운전자가 AV를 운전 (신호·양보·차선 선택을 지키는 전문가 시연).
         # 정책 출력은 쓰이지 않고, 기록하는 action_raw는 환경이 실제 움직임에서 역산한 값이다.
         return lambda obs: np.zeros(2, dtype=np.float32)
 
@@ -185,7 +143,7 @@ def make_policy(args, env, worker_seed: int):
 
 
 def _rule_policy(env):
-    """check_env.rule_policy(env) — environment/road를 경로에 넣고 불러온다 (evaluation/baseline.py와 같은 정책)."""
+    """check_env.rule_policy(env) : environment/road를 경로에 넣고 불러온다 (evaluation/baseline.py와 같은 정책)."""
     road_dir = os.path.join(P.ROOT, "environment", "road")
     if road_dir not in sys.path:
         sys.path.insert(0, road_dir)
@@ -199,7 +157,7 @@ def compact(obj, ndigits: int):
 
     float32 값을 그대로 json.dumps하면 0.10000000149011612처럼 17자리로 찍히는데,
     반올림하면 0.1이 되어 텍스트 길이가 크게 준다. numpy 스칼라/배열도 함께 변환한다.
-    """
+"""
     if isinstance(obj, (float, np.floating)):
         return round(float(obj), ndigits)
     if isinstance(obj, (bool, np.bool_)):
@@ -220,7 +178,7 @@ def iter_transitions(jsonl_path: str):
     다음 레코드에서 채운 완전한 transition dict를 순서대로 yield한다.
 
     (수집이 중간에 끊긴 파일이면 마지막 레코드에만 next_*가 없을 수 있다.)
-    """
+"""
     opener = gzip.open if jsonl_path.endswith(".gz") else open
     with opener(jsonl_path, "rt", encoding="utf-8") as f:
         prev = None
@@ -243,7 +201,7 @@ def collect(args, sumocfg, episodes, worker_id, jsonl_path, npz_path, tag=""):
 
     --workers > 1이면 이 함수가 프로세스마다 하나씩 돌고, main()이 결과를 합친다.
     반환값: 수집한 transition 수.
-    """
+"""
     worker_seed = (args.seed * 1000 + worker_id) % 2**32
     if args.workers > 1:
         # 프로세스마다 torch가 코어 수만큼 스레드를 띄우면 서로 뺏는다. 관측 1개씩
@@ -254,7 +212,7 @@ def collect(args, sumocfg, episodes, worker_id, jsonl_path, npz_path, tag=""):
         except ImportError:
             pass
 
-    # [12팀 11/16] 안전장치(충돌 방지 제동) 켬/끔 — 학습(train_team.py --safety) · 평가(baseline.py --safety)와 같은 방식으로 덮어쓴다.
+    # 안전장치(충돌 방지 제동) 켬/끔 : 학습(train_team.py --safety) · 평가(baseline.py --safety)와 같은 방식으로 덮어쓴다.
     action = dict(ACTION, safety_brake=dict(ACTION.get("safety_brake") or {}, enabled=(args.safety == "on")))
     env = SumoHighwayEnv(
         cfg_path=sumocfg,
@@ -266,7 +224,7 @@ def collect(args, sumocfg, episodes, worker_id, jsonl_path, npz_path, tag=""):
         gui_autostart=True,
     )
     act = make_policy(args, env, worker_seed)
-    label = _rule_policy(env) if getattr(args, "label_policy", None) == "rule" else None   # [12팀 11/17] DAgger 정답
+    label = _rule_policy(env) if getattr(args, "label_policy", None) == "rule" else None   # DAgger 정답
     # sumo_env가 SUMO --seed를 np.random(전역)에서 뽑는다. PPO 생성자가 전역 시드를
     # HPARAMS["seed"]로 되돌려 놓으므로 정책을 만든 "뒤에" 워커별로 다시 시드해야
     # 워커들이 같은 교통 패턴을 반복하지 않는다.
@@ -278,22 +236,22 @@ def collect(args, sumocfg, episodes, worker_id, jsonl_path, npz_path, tag=""):
     term_buf, trunc_buf, episode_buf, step_buf = [], [], [], []
     # 스텝별 감지 차량 (x,y)는 한 줄로 이어 붙이고, 스텝 경계는 offsets로 기록한다.
     detected_xy_buf, detected_offsets = [], [0]
-    # [12팀 추가 칼럼]
+    #
     sim_time_buf, route_buf, end_reason_buf = [], [], []
     sig_tls_buf, sig_state_buf, sig_remain_buf = [], [], []
 
     total = 0
     try:
         # compresslevel 6: 9와 크기 차이는 거의 없고 훨씬 빠르다.
-        # 더 줄이고 싶으면 gzip.open 대신 lzma.open(..., "wt") (.jsonl.xz) —
+        # 더 줄이고 싶으면 gzip.open 대신 lzma.open(..., "wt") (.jsonl.xz) :
         # 느린 대신 보통 20~30% 추가 절감.
         with gzip.open(jsonl_path, "wt", encoding="utf-8", compresslevel=6) as jf:
             for ep in episodes:
                 opts = {k: v for k, v in (("scenario", args.scenario), ("route", args.route)) if v}
-                dl_opt = getattr(args, "depart_lane", "best")               # [12팀 11/19] 출발 옵션 (기본값이면 안 넣음)
+                dl_opt = getattr(args, "depart_lane", "best")               # 출발 옵션 (기본값이면 안 넣음)
                 if dl_opt == "random":
                     opts["depart_lane"] = "random"
-                elif dl_opt != "best":                                       # [12팀 11/21] 차로 번호 고정 (영상 고르기용)
+                elif dl_opt != "best":                                       # 차로 번호 고정 (영상 고르기용)
                     opts["depart_lane"] = int(dl_opt)
                 if getattr(args, "depart_speed", "default") == "limit":
                     opts["depart_speed"] = "limit"
@@ -305,7 +263,7 @@ def collect(args, sumocfg, episodes, worker_id, jsonl_path, npz_path, tag=""):
                 try:
                     obs, _ = env.reset(seed=args.seed + ep, options=opts or None)
                 except RuntimeError as e:
-                    # [12팀 11/19] ego 삽입 실패(출발 차로 입구가 60스텝 넘게 막힘)는 그 판만 건너뛴다.
+                    # ego 삽입 실패(출발 차로 입구가 60스텝 넘게 막힘)는 그 판만 건너뛴다.
                     # 전에는 예외가 워커를 죽여 그 워커의 데이터 전체와 합치기 단계를 잃었다 (11/19 시범 · DAgger 수집에서 두 번).
                     # 건너뛴 판은 기록에 없으므로 episode 번호가 비어 있다 (평가 baseline.py도 같은 오류를 판 단위로 넘긴다).
                     print(f"{tag}episode {ep + 1:4d}/{args.episodes} | 건너뜀 (reset 실패: {e})", flush=True)
@@ -319,8 +277,8 @@ def collect(args, sumocfg, episodes, worker_id, jsonl_path, npz_path, tag=""):
                     # 이번 관측 시점에 시야(W) 안에 들어온 차량들의 좌표.
                     # 관측 벡터와 별도로 저장하는 부가 데이터 (분석/시각화용).
                     detected = env.get_detected_vehicles()
-                    signal_t = env.get_signal_state()   # [12팀 추가] 관측 시점 t에 AV가 다음에 만날 신호
-                    sim_time_t = env.get_sim_time()     # [12팀 11/19] 관측 시점 t의 시뮬레이션 시각 (s)
+                    signal_t = env.get_signal_state()   # 관측 시점 t에 AV가 다음에 만날 신호
+                    sim_time_t = env.get_sim_time()     # 관측 시점 t의 시뮬레이션 시각 (s)
                     sig_tls = SIGNAL_TLS_CODES.get(signal_t["tls"], -1) if signal_t else -1
                     sig_state = SIGNAL_STATE_VALUES.get(signal_t["state"], -1.0) if signal_t else -1.0
                     sig_rem = signal_t["remaining_s"] if signal_t else None
@@ -386,7 +344,7 @@ def collect(args, sumocfg, episodes, worker_id, jsonl_path, npz_path, tag=""):
                     step_buf.append(t)
                     detected_xy_buf.extend((d["x"], d["y"]) for d in detected)
                     detected_offsets.append(len(detected_xy_buf))
-                    # [12팀 추가] 정수 코드로 (뜻은 아래 *_CODES)
+                    # 정수 코드로 (뜻은 아래 *_CODES)
                     sim_time_buf.append(sim_time_t)
                     route_buf.append(ROUTE_CODES.get(info.get("route"), -1))
                     sig_tls_buf.append(sig_tls)
@@ -420,7 +378,7 @@ def collect(args, sumocfg, episodes, worker_id, jsonl_path, npz_path, tag=""):
         # 스텝 i의 좌표: detected_xy[detected_offsets[i]:detected_offsets[i+1]]
         detected_xy=np.asarray(detected_xy_buf, dtype=np.float32).reshape(-1, 2),
         detected_offsets=np.asarray(detected_offsets, dtype=np.int64),
-        # [12팀 추가 칼럼] 코드표는 SCENARIO_CODES / ROUTE_CODES / SIGNAL_TLS_CODES / SIGNAL_STATE_VALUES / END_REASON_CODES
+        # 코드표는 SCENARIO_CODES / ROUTE_CODES / SIGNAL_TLS_CODES / SIGNAL_STATE_VALUES / END_REASON_CODES
         sim_time=np.asarray(sim_time_buf, dtype=np.float64),
         ego_route=np.asarray(route_buf, dtype=np.int8),
         signal_tls=np.asarray(sig_tls_buf, dtype=np.int8),
@@ -482,13 +440,13 @@ def main():
     parser.add_argument("--device", default="cpu",
                         help="정책 추론 장치 (cpu/cuda). 관측 1개씩 추론이라 cpu로 충분")
     parser.add_argument("--seed", type=int, default=0)
-    # [12팀 추가] 시나리오·AV 경로 지정 (생략하면 에피소드마다 무작위 — environment/env/road_config.py ROAD["scenario"]="mixed")
+    # 시나리오·AV 경로 지정 (생략하면 에피소드마다 무작위 : environment/env/road_config.py ROAD["scenario"]="mixed")
     parser.add_argument("--scenario", choices=["before", "after"], default=None,
                         help="잠수교 보행화 전(before) / 후(after) 고정")
     parser.add_argument("--route", choices=list(ROUTE_CODES), default=None,
                         help="AV 경로 고정 (경로마다 쓸 수 있는 시나리오는 road_spec.AV_ROUTES의 scenarios — "
                              "한 시나리오에만 있는 경로를 --scenario 없이 주면 그 시나리오로 고정)")
-    # [12팀 11/19] AV 출발 차로 · 속도 (env.reset options — 기본값이면 옵션을 주지 않아 기존 동작과 같다)
+    # AV 출발 차로 · 속도 (env.reset options : 기본값이면 옵션을 주지 않아 기존 동작과 같다)
     parser.add_argument("--depart-lane", type=lambda v: v if v in ("best", "random") else str(int(v)), default="best",
                         metavar="{best,random,차로 번호}",
                         help="AV 출발 차로: best = 옵션 안 줌(EGO 설정) · random = 출발 엣지 승용차 차로 중 무작위")
@@ -514,7 +472,7 @@ def main():
         parser.error(f"모델 파일이 없습니다: {args.model}")
     if args.policy is None:
         args.policy = detect_algorithm(args.model) if args.model else "random"
-    if args.route is not None:               # [12팀] 경로별 시나리오 제한 (road_spec.AV_ROUTES[...]["scenarios"])
+    if args.route is not None:               # 경로별 시나리오 제한 (road_spec.AV_ROUTES[...]["scenarios"])
         road_dir = os.path.join(P.ROOT, "environment", "road")
         if road_dir not in sys.path:
             sys.path.insert(0, road_dir)

@@ -10,7 +10,7 @@ import sumolib
 
 
 def load(netf):
-    """(sumolib net, 차로별 속성 dict) — 속성은 changeLeft/changeRight 확인용 (통행 허용은 sumolib lane.allows)."""
+    """(sumolib net, 차로별 속성 dict) : 속성은 changeLeft/changeRight 확인용 (통행 허용은 sumolib lane.allows)."""
     net = sumolib.net.readNet(netf, withInternal=True)
     root = ET.parse(netf).getroot()
     lane_attr = {l.get("id"): l.attrib for e in root.iter("edge") if not e.get("id", "").startswith(":")
@@ -34,7 +34,7 @@ def _next_lanes(net, lane_attr, l):
 
 
 def lane_path(net, lane_attr, a, b):
-    """엣지 a → b 로 승용차가 실제로 갈 수 있는 엣지 순서 (없으면 None)."""
+    """엣지 a  /  b 로 승용차가 실제로 갈 수 있는 엣지 순서 (없으면 None)."""
     start = [l for l in net.getEdge(a).getLanes() if l.allows("passenger")]
     par = {l.getID(): None for l in start}
     q = list(start)
@@ -76,7 +76,7 @@ def route_feasible(net, lane_attr, edges):
 
 
 def od_paths(net, lane_attr, entry, exits, closed=()):
-    """진입점 → 출구 비율 표를 경로로 바꾼다 → [(출구 키, 비율, 엣지 순서)].
+    """진입점  /  출구 비율 표를 경로로 바꾼다  /  [(출구 키, 비율, 엣지 순서)].
 
     출구 키는 "출구" 또는 "출구|경유엣지" (예: "bridge|side_a4" = 측도를 거쳐 반포대교).
     경유를 안 주면 차로 단위 최단 경로. 막힌 엣지(closed)를 지나거나 차로 규칙상 못 가는 조합은 뺀다."""

@@ -1,7 +1,7 @@
-"""장시간 안정성 점검 — 배경 교통만 (AV 없음) 시나리오 × 시드마다 몇 시간씩 돌려, 짧은 검증(check_env 30분)에서
+"""장시간 안정성 점검 : 배경 교통만 (AV 없음) 시나리오 × 시드마다 몇 시간씩 돌려, 짧은 검증(check_env 30분)에서
 안 보이는 문제를 찾는다: 서서히 자라는 대기열, 교착(gridlock), 순간이동, 충돌, 진입점 투입 부족, 측정 링크 재현.
 
-사용 (프로젝트 루트에서, environment/env/sumo/banpo/ 파일이 이미 있어야 함 — check_env.py나 environment/view_road.py가 만든다):
+사용 (프로젝트 루트에서, environment/env/sumo/banpo/ 파일이 이미 있어야 함 : check_env.py나 environment/view_road.py가 만든다):
     python -X utf8 environment/road/check_long.py                       # 두 시나리오 × 시드 3개 × 240분, 병렬 (약 6~8분)
     python -X utf8 environment/road/check_long.py --minutes 120 --seeds 11 22
 
@@ -10,7 +10,7 @@
 - 결과: environment/road/build/check_long_report.txt (콘솔에도 출력). 종료 코드는 충돌 · 순간이동이 있을 때만 1.
   투입 부족 · 투입 대기 누적 · 자라는 대기열은 "주의(△)"로 따로 모아 보여 준다 (실패는 아니지만 원인을 확인 · 기록).
 - 11/12 이 점검으로 찾은 것: 회전교차로 고리 교착(2시간 뒤부터), 김포 방향 투입 −15~25%, 신반포로 동행 대기열 증가,
-  측도 남행 포켓 충돌 → 모두 고침 (`docs/프로젝트_기록.md` 부록 #26~#29).
+  측도 남행 포켓 충돌  /  모두 고침 (`docs/프로젝트_기록.md` §11 #26~#29).
 """
 import argparse, collections, os, statistics as st, sys
 import xml.etree.ElementTree as ET
@@ -30,7 +30,7 @@ LINKS = {"bridge": "반포대교 북행", "jam_n": "잠수교 북행", "wb_a": "
 
 
 def entry_of(vid):
-    """배경차 f_<진입>__<출구>…, 버스 bus_<노선>__<진입>__<출구> → 진입 도로."""
+    """배경차 f_<진입>__<출구>…, 버스 bus_<노선>__<진입>__<출구>  /  진입 도로."""
     p = vid.split("__")
     if vid.startswith("f_") and len(p) > 1:
         return p[0][2:]
@@ -64,7 +64,7 @@ def run(job):
     if scn == "after":                          # 환경(environment/env/sumo_env.py reset)과 같은 함수로 잠수교 차로 통제 · 신호 끔
         apply_after_closure(traci, *after_closure_targets())
     edges = [e for e in traci.edge.getIDList() if not e.startswith(":")]
-    nwin = max(1, int(minutes * 60 // WIN))     # 10분 창 단위로만 돈다 (남는 시간은 버림 — 마지막 창이 부풀지 않게)
+    nwin = max(1, int(minutes * 60 // WIN))     # 10분 창 단위로만 돈다 (남는 시간은 버림 : 마지막 창이 부풀지 않게)
     spw = int(WIN / DT)
     halt = {e: [0.0] * nwin for e in edges}
     maxwait = {e: [0.0] * nwin for e in edges}
@@ -107,7 +107,7 @@ def run(job):
 
 def report(results, minutes):
     """판정: 충돌 · 순간이동이 있으면 실패(✗). 투입 부족(수요의 95% 미만) · 투입 대기 누적(끝날 때 대기 >
-    수요 × 시간의 2%) · 자라는 대기열은 주의(△) — 실패는 아니지만 원인을 확인하고 기록한다."""
+    수요 × 시간의 2%) · 자라는 대기열은 주의(△) : 실패는 아니지만 원인을 확인하고 기록한다."""
     L = []
     say = L.append
     ok = True

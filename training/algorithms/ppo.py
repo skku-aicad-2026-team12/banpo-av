@@ -1,10 +1,10 @@
-"""PPO(Proximal Policy Optimization) — 알고리즘 본체.
+"""PPO(Proximal Policy Optimization) : 알고리즘 본체.
 
 이 파일에는 "알고리즘"만 있다:
-    네트워크 구조  → training/utils/networks.py
-    경험 버퍼      → training/utils/buffer.py   (RolloutBuffer — 메인에서 주입받음)
-    정책 평가      → training/utils/evaluator.py
-    로깅          → training/utils/logger.py
+    네트워크 구조   /  training/utils/networks.py
+    경험 버퍼       /  training/utils/buffer.py   (RolloutBuffer : 메인에서 주입받음)
+    정책 평가       /  training/utils/evaluator.py
+    로깅           /  training/utils/logger.py
 덕분에 아래 코드는 PPO 수식과 1:1로 대응해서 읽을 수 있다.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -28,8 +28,8 @@ policy gradient의 기본:
 
 advantage는 GAE(λ)로 추정:
     δ_t = r_t + γ·V(s_{t+1})·(1-done) - V(s_t)
-    A_t = δ_t + (γλ)·(1-done)·A_{t+1}          ← 뒤에서 앞으로 재귀
-    R_t = A_t + V(s_t)                          ← critic의 회귀 타깃
+    A_t = δ_t + (γλ)·(1-done)·A_{t+1}            뒤에서 앞으로 재귀
+    R_t = A_t + V(s_t)                            critic의 회귀 타깃
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 학습 루프:
@@ -57,7 +57,7 @@ class PPO:
 
     하이퍼파라미터는 생성자 인자로 명시적으로 받는다
     (training/train.py에서 한눈에 보고 바꿀 수 있도록).
-    """
+"""
 
     def __init__(
         self,
@@ -83,7 +83,7 @@ class PPO:
         normalize_advantage: bool = True,
         # ---- 네트워크 ----
         policy_type: str = "hybrid",  # "hybrid"(가감속 연속 + 차선 이산, 권장)
-                                      # | "gaussian"(모든 축 연속 — dead zone 있음)
+                                      # | "gaussian"(모든 축 연속 : dead zone 있음)
         lane_keep_bias: float = 1.0,  # hybrid 전용: 차선 "유지" 초기 편향
         hidden_sizes=(64, 64),
         activation: str = "tanh",
@@ -105,7 +105,7 @@ class PPO:
         # 네트워크는 training/utils/networks.py 에서 가져온다.
         # hybrid: 가감속(Normal) + 차선변경(Categorical 3-way).
         #   양자화 dead zone이 없어 deterministic 평가에서도 변경이 나온다.
-        # gaussian: 모든 축 연속 — 비교 실험용으로 남겨둠.
+        # gaussian: 모든 축 연속 : 비교 실험용으로 남겨둠.
         if policy_type == "hybrid":
             assert act_dim == 2, "hybrid 정책은 [가감속, 차선] 2차원 행동 전용"
             self.policy = HybridActorCritic(
@@ -153,7 +153,7 @@ class PPO:
 
         hybrid: 가감속은 Normal 샘플, 차선은 Categorical 샘플(-1/0/+1).
         gaussian: 기존과 동일한 전차원 Normal 샘플.
-        """
+"""
         obs_t = torch.as_tensor(obs, dtype=torch.float32,
                                 device=self.device).unsqueeze(0)
         if hasattr(self.policy, "sample"):          # hybrid 경로
@@ -172,7 +172,7 @@ class PPO:
         """평가/실행용. hybrid의 deterministic = (μ, argmax 차선).
 
         training/utils/evaluator.py 가 요구하는 인터페이스이기도 하다.
-        """
+"""
         obs_t = torch.as_tensor(obs, dtype=torch.float32,
                                 device=self.device).unsqueeze(0)
         if hasattr(self.policy, "det_action"):       # hybrid 경로
@@ -205,7 +205,7 @@ class PPO:
             ep_stats: [ep_return, ep_length] 리스트 (호출 간 누적 유지)
         Returns:
             (last_obs, last_value, finished_returns)
-        """
+"""
         obs = state
         finished_returns = []
         self.buffer.clear()
@@ -250,7 +250,7 @@ class PPO:
         adv_t = torch.as_tensor(advantages, device=self.device)
         ret_t = torch.as_tensor(returns, device=self.device)
 
-        # advantage 정규화: 스케일을 평균0/표준편차1로 → 학습률 민감도 감소
+        # advantage 정규화: 스케일을 평균0/표준편차1로  /  학습률 민감도 감소
         if self.normalize_advantage:
             adv_t = (adv_t - adv_t.mean()) / (adv_t.std() + 1e-8)
 
@@ -316,7 +316,7 @@ class PPO:
 
         out = {k: v / max(n_batches, 1) for k, v in stats.items()}
         # hybrid 진단: 업데이트 "후" 정책의 평균 차선변경(좌+우) 확률.
-        #   0으로 붕괴 → 차선유지 지역최적 경고 / 적당히 유지되며
+        #   0으로 붕괴  /  차선유지 지역최적 경고 / 적당히 유지되며
         #   eval의 차선변경 횟수가 오르면 제대로 배우는 중.
         if hasattr(self.policy, "lane_change_prob"):
             with torch.no_grad():
@@ -335,7 +335,7 @@ class PPO:
         Args:
             logger: utils.logger.RunLogger (없으면 콘솔 출력만)
             eval_interval: 몇 번의 업데이트마다 평가할지 (0이면 평가 안 함)
-        """
+"""
         obs, _ = env.reset()
         ep_stats = [0.0, 0]                    # [현재 에피소드 보상, 길이]
         recent_returns = deque(maxlen=20)

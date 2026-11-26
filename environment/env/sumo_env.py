@@ -1,20 +1,8 @@
-"""SUMO 고속도로 RL 환경 — Gymnasium 인터페이스 + TraCI.
+"""반포 도로망을 Gymnasium 인터페이스로 제어하는 SUMO 환경.
 
-┌─────────────────────────────────────────────────────────────┐
-│  강화학습 루프에서 이 클래스의 역할                              │
-│                                                             │
-│    obs, _ = env.reset()          # 에피소드 시작, 초기 관측     │
-│    obs, r, term, trunc, _ = env.step(action)  # 1스텝 진행    │
-│                                                             │
-│  내부적으로는 TraCI(Traffic Control Interface)라는 소켓 API로  │
-│  SUMO 시뮬레이터를 원격 조종한다:                               │
-│    traci.simulationStep()  → 시뮬레이션을 1스텝 진행            │
-│    traci.vehicle.setSpeed() → 차량 속도 명령                   │
-│    traci.vehicle.getSpeed() 등 → 상태 조회                     │
-└─────────────────────────────────────────────────────────────┘
-
-관측/행동/보상의 구체적인 정의는 configs/mdp_config.py 에 있고,
-이 파일은 그 설정을 받아서 실행만 한다. (MDP를 바꿀 때 이 파일 수정 불필요)
+reset()은 에피소드를 시작하고 step(action)은 속도·차로 명령을 적용한다.
+화면 없는 실행에는 libsumo를 우선 사용하며, GUI 실행에는 TraCI를 쓴다.
+관측·행동·보상 설정은 mdp_config.py, 도로·교통 설정은 road_config.py에서 읽는다.
 """
 import os
 import sys
@@ -30,7 +18,7 @@ from gymnasium import spaces
 # 자동으로 잡아준다 (환경변수 설정을 깜빡해도 동작하도록).
 if "SUMO_HOME" not in os.environ:
     _candidates = [
-        # macOS (Homebrew) — Apple Silicon / Intel
+        # macOS (Homebrew) : Apple Silicon / Intel
         "/opt/homebrew/opt/sumo/share/sumo",
         "/usr/local/opt/sumo/share/sumo",
         # Linux (apt)
@@ -58,9 +46,8 @@ import traci
 import traci.constants as _tc
 from sumolib import checkBinary
 
-# [12팀 수집 최적화] 화면 없이 돌 때는 libsumo(SUMO를 파이썬 프로세스 안에서 직접 호출)를 쓴다.
-# TraCI 소켓 왕복·결과 해석이 사라져 같은 결과를 약 2배 빨리 낸다 (같은 SUMO 1.27.1 → 출력 동일, 비교 검증함).
-# 설치: pip install libsumo==<SUMO 버전>. 없거나 SUMO_LIBSUMO=0이면 기존 TraCI 그대로. GUI는 항상 TraCI.
+# 화면 없는 실행에는 libsumo를 사용해 TraCI 소켓 통신을 줄인다.
+# 사용할 수 없거나 GUI 실행이면 TraCI를 사용한다.
 try:
     import libsumo as _libsumo
 except ImportError:
@@ -81,13 +68,13 @@ def _road_spec():
     return road_spec
 
 
-# [12팀] 잠수교 보행화 후 처리 — 환경(reset)과 environment/road/check_long.py가 이 두 함수를 같이 쓴다 (11/15, 코드 한 벌)
+# 잠수교 보행화 후 처리 : 환경(reset)과 environment/road/check_long.py가 이 두 함수를 같이 쓴다 (11/15, 코드 한 벌)
 def after_closure_targets():
     """보행화 후 막을 엣지와 끌 신호 (environment/road/road_spec.py 기준).
 
     엣지: 보행화 전에만 있는 엣지(CLOSED_AFTER = 잠수교 남·북행). 도로는 그대로 두고 차량만 통제한다.
-    신호: 보행화 전에만 작동하는 신호 (잠수교 횡단보도 C-ITS 4616 · 24616 — 통제 후 점멸 운영이라 끈다)
-    """
+    신호: 보행화 전에만 작동하는 신호 (잠수교 횡단보도 C-ITS 4616 · 24616 : 통제 후 점멸 운영이라 끈다)
+"""
     road_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "road")
     if road_dir not in sys.path:
         sys.path.insert(0, road_dir)
@@ -100,7 +87,7 @@ def apply_after_closure(tc, closed_edges, tls_off, mark=False):
     """보행화 후: 막을 엣지의 모든 차로를 보행자 전용으로, 잠수교 신호를 끈다 (SUMO 시작 직후 1번).
 
     tc: 지금 연결된 traci 또는 libsumo 모듈. mark=True면 sumo-gui에 막힌 차로를 빨간 선으로 표시한다.
-    """
+"""
     for e in closed_edges:
         for i in range(tc.edge.getLaneNumber(e)):
             tc.lane.setAllowed(f"{e}_{i}", ["pedestrian"])
@@ -113,7 +100,7 @@ def apply_after_closure(tc, closed_edges, tls_off, mark=False):
             tc.trafficlight.setProgram(tl, "off")
 
 
-# 신호색 묶음: 같은 묶음 안에서 바뀌는 것(G ↔ g)은 "색이 바뀐 것"으로 보지 않는다
+# G/g처럼 같은 색 안에서 우선권만 달라진 것은 색 변경으로 세지 않는다.
 _SIG_GROUP = {"G": "green", "g": "green", "y": "yellow", "Y": "yellow", "u": "yellow",
               "r": "red", "R": "red", "s": "red", "o": "off", "O": "off"}
 
@@ -136,12 +123,12 @@ class SumoHighwayEnv(gym.Env):
                 None이면 프리필 없이 flow만으로 동작 (하위호환)
             gui:      True면 sumo-gui(화면 있는 버전)로 실행
             gui_autostart: (gui=True일 때만 의미)
-                True  → 창이 뜨면 시뮬레이션이 자동으로 시작
-                False → 사용자가 ▶(플레이) 버튼을 누를 때까지 대기.
+                True   /  창이 뜨면 시뮬레이션이 자동으로 시작
+                False  /  사용자가 ▶(플레이) 버튼을 누를 때까지 대기.
                         sumo-gui는 --start 옵션이 없으면 TraCI의
                         simulationStep() 호출도 플레이 전까지 블록되므로,
                         에피소드 전체가 "▶를 눌러야 시작"되는 효과가 난다.
-        """
+"""
         super().__init__()
         self.cfg_path = cfg_path
         self.gui = gui
@@ -154,7 +141,7 @@ class SumoHighwayEnv(gym.Env):
         self.vmax = float(road["speed_limit"])   # 속도 정규화 기준
         self.num_lanes = int(road["num_lanes"])
         # 시작 차선: "center"면 중앙 차선(차선수//2)으로 자동 결정.
-        #   3차선 → 1번(가운데), 5차선 → 2번. 차선 수를 바꿔도 항상 가운데라
+        # 3차로는 1번, 5차로는 2번을 선택해 차로 수에 맞춰 가운데에서 출발한다.
         #   좌/우 양쪽으로 변경 여지가 대칭으로 생긴다 (탐험에 유리).
         _dl = ego["depart_lane"]
         if str(_dl).lower() == "center":
@@ -213,18 +200,18 @@ class SumoHighwayEnv(gym.Env):
         self.scenario = None            # 이번 에피소드의 시나리오
         self.closed_after = []
         self.tls_before_only = []
-        self._tls_phases = {}           # 신호별 [(지속 s, state 문자열)] — reset마다 SUMO에서 읽음 (get_signal_state)
+        self._tls_phases = {}           # 신호별 [(지속 s, state 문자열)] : reset마다 SUMO에서 읽음 (get_signal_state)
         if self.network:
             self.closed_after, self.tls_before_only = after_closure_targets()
         self.warmup_s = float(self.traffic.get("warmup_s", 0.0)) if self.network else 0.0
         # SUMO 기본 운전자 모드: 정책 행동을 무시하고 SUMO가 AV를 운전한다 (검증·BC 전문가용).
         # info의 accel_raw/lane_change는 실제 움직임에서 거꾸로 계산한 값.
         self.sumo_driver = bool(ego.get("sumo_driver", False))
-        # [12팀 11/17] SUMO 운전자 시범의 앞차 정지 간격 (m). None이면 차종 기본(2.5 m = 충돌 판정 경계에 정확히 선다).
+        # SUMO 운전자 시범의 앞차 정지 간격 (m). None이면 차종 기본(2.5 m = 충돌 판정 경계에 정확히 선다).
         # 수집 --demo-min-gap에서만 준다 (기준 지표는 차종 기본 그대로).
         self.sumo_min_gap = ego.get("sumo_min_gap")
         # 행동 a ∈ [-1,1] 을 실제 가속도로 변환할 때 쓰는 스케일:
-        #   a = +1 → +max_accel (풀 액셀),  a = -1 → -max_decel (풀 브레이크)
+        # a=+1은 최대 가속, a=-1은 최대 제동에 대응한다.
         self.max_accel = float(ego["accel"])   # m/s^2
         self.max_decel = float(ego["decel"])   # m/s^2 (양수로 저장, 부호는 계산 시)
 
@@ -237,36 +224,36 @@ class SumoHighwayEnv(gym.Env):
         self.visibility = float(mdp_obs["visibility"])   # 관측 거리 W
         # 밀도 정규화용 "차량 1대가 점유하는 길이" (차체 + 최소 간격)
         self.density_veh_len = float(mdp_obs.get("density_veh_length", 7.5))
-        # [12팀 11/15] 경로 · 신호 관측 정규화 거리 (mdp_config.OBSERVATION 주석)
+        # 경로 · 신호 관측 정규화 거리 (mdp_config.OBSERVATION 주석)
         self.route_horizon = float(mdp_obs.get("route_horizon", 300.0))
         self.signal_horizon = float(mdp_obs.get("signal_horizon", 150.0))
-        # [12팀 11/16] 선택 관측 (스위치 — 바꾸면 시범 · BC부터 다시): 경합 차량 4 · 차로 제한속도 3 (mdp_config 주석 [39..])
+        # 선택 관측 (스위치 : 바꾸면 시범 · BC부터 다시): 경합 차량 4 · 차로 제한속도 3 (mdp_config 주석 [39..])
         self.conflict_obs = bool(mdp_obs.get("conflict_obs", False))
         self.conflict_horizon = float(mdp_obs.get("conflict_horizon", 100.0))
         self.speed_limit_obs = bool(mdp_obs.get("speed_limit_obs", False))
-        # [12팀 11/17] 신호 남은 시간 1 (컨설팅 질문 2 답: C-ITS 기준으로 넣어도 됨 — mdp_config 주석 [42])
+        # 신호 남은 시간 1 (컨설팅 질문 2 답: C-ITS 기준으로 넣어도 됨 : mdp_config 주석 [42])
         self.signal_time_obs = bool(mdp_obs.get("signal_time_obs", False))
         self.signal_time_horizon = float(mdp_obs.get("signal_time_horizon", 170.0))
-        # [12팀 11/19] 분기 2개 · 차로 진행 방향 (mdp_config 주석 [31..38]). 끄면 43차원 그대로.
-        # 환경변수 SUMO_LANE_DIR_OBS=0/1이 있으면 설정을 덮어쓴다 (43차원 모델 평가 — 평가 워커는 spawn이라 환경변수를 물려받는다)
+        # 분기 2개 · 차로 진행 방향 (mdp_config 주석 [31..38]). 끄면 43차원 그대로.
+        # 환경변수 SUMO_LANE_DIR_OBS=0/1이 있으면 설정을 덮어쓴다 (43차원 모델 평가 : 평가 워커는 spawn이라 환경변수를 물려받는다)
         _ldo = os.environ.get("SUMO_LANE_DIR_OBS")
         self.lane_dir_obs = bool(mdp_obs.get("lane_dir_obs", False)) if _ldo in (None, "") else _ldo.strip() not in ("0", "false", "False")
         self.branch_horizon = float(mdp_obs.get("branch_horizon", 600.0))
-        # [12팀 11/19] 잘못된 차로 조기 종료 거리 (m, 0이면 끔) — mdp_config SIMULATION 주석
+        # 잘못된 차로 조기 종료 거리 (m, 0이면 끔) : mdp_config SIMULATION 주석
         self.wrong_lane_end_m = float(mdp_sim.get("wrong_lane_end_m", 0.0))
-        self._rank_cache = {}            # (시나리오, 분기 엣지) → {나가는 도로: +1 맨 왼쪽 .. -1 맨 오른쪽}
-        self._lane_out_cache = {}        # (시나리오, 차로) → 승용차가 갈 수 있는 다음 차로 목록
-        self._continue_cache = {}        # (시나리오, 차로, 경로 인덱스, 경로) → 잘못된 차로 판정 (_lane_continues)
-        self._lane_reach_cache = {}      # (시나리오, 차로) → ([(차로 끝부터 분기 끝까지 m, 방향 집합)] × 첫째 · 둘째 분기)
-        self._edge_speed = {}            # 엣지 → (제한속도, 길이) (도로망은 고정, 엣지 안 차로는 모두 같은 제한속도)
-        self._turn_cache = {}            # (분기 엣지, 다음 경로 엣지) → 방향 (도로망 고정)
-        self._branch_cache = {}          # (시나리오, 엣지) → 끝에서 다른 도로로도 나갈 수 있는가 (시나리오마다 한 번만 계산)
+        self._rank_cache = {}            # 시나리오·분기 엣지별 출구 방향 순위.
+        self._lane_out_cache = {}        # 시나리오·차로별로 승용차가 갈 수 있는 다음 차로 목록.
+        self._continue_cache = {}        # 시나리오·차로·경로별 진행 가능 여부 캐시 (_lane_continues).
+        self._lane_reach_cache = {}      # 시나리오·차로별 첫째·둘째 분기의 거리와 도달 가능한 방향.
+        self._edge_speed = {}            # 엣지별 제한속도와 길이. 도로망은 고정이며 같은 엣지의 차로 제한속도는 같다.
+        self._turn_cache = {}            # 분기 엣지와 다음 경로 엣지에 대응하는 방향.
+        self._branch_cache = {}          # 시나리오·엣지별로 끝에서 다른 도로로 나갈 수 있는지 저장한다.
         self.act_dim = int(action["dim"])
         self.accel_index = int(action.get("accel_index", 0))
         self.lane_change_index = int(action.get("lane_change_index", 1))
         self.lane_change_threshold = float(action.get("lane_change_threshold", 0.5))
         self.lane_change_duration = float(action.get("lane_change_duration", 1.0))
-        # [12팀 11/15] 안전장치 스위치: 최소 충돌 방지 제동 (RL 모드에서만, mdp_config.ACTION["safety_brake"])
+        # 안전장치 스위치: 최소 충돌 방지 제동 (RL 모드에서만, mdp_config.ACTION["safety_brake"])
         sb = action.get("safety_brake") or {}
         self.safety_brake = bool(sb.get("enabled", False))
         self.safety_min_gap = float(sb.get("min_gap", 2.0))
@@ -289,20 +276,16 @@ class SumoHighwayEnv(gym.Env):
         # 차선변경 명령은 info["lane_change"]에 정확한 -1/0/+1로 반환한다.
         self.action_space = spaces.Box(low=-1.0, high=1.0,
                                        shape=(self.act_dim,), dtype=np.float32)
-        # 관측: 35차원 (+ 선택 관측: 경합 차량 4 · 차로 제한속도 3, 11/16 · 신호 남은 시간 1, 11/17 — 모두 켜면 43), 범위 [-1,1]. 레이아웃은 environment/env/mdp_config.py 주석 참고.
-        #   [0] 내 속도, [1..20] 5개 차선 × (선행/후행 상대거리·상대속도),
-        #   [21..25] 연결성(끊김 정도), [26..30] 전방 밀도 — 여기까지 수업 원본 31차원
-        #   [31] 다음 분기 방향, [32] 다음 분기까지 거리 (12팀 11/17 — 차로별 경로 관측은 뺌), [33] 앞 신호색, [34] 정지선까지 거리
-        #   (+ 11/19 lane_dir_obs 6: 둘째 분기 2 · 내 차로가 가는 쪽 4 — 켜면 49, [31..] 배치가 바뀐다 — 아래 self.obs_index)
-        #   시야 차선: 좌2, 좌1, 현재, 우1, 우2 (5개) — 3차선 도로에서
-        #   맨 왼쪽에 있어도 오프셋 -2로 맨 오른쪽 차선까지 보인다.
+        # 기본 구성은 49차원이며 lane_dir_obs를 끄면 기존 43차원 모델과 호환된다.
+        # 5개 차로의 국소 교통과 경로·신호·경합 차량·제한속도를 관측한다.
+        # 상세 배치는 mdp_config.py와 self.obs_index를 따른다.
         self.obs_offsets = (+2, +1, 0, -1, -2)
         n_lanes_view = len(self.obs_offsets)
         self.obs_dim = 1 + n_lanes_view * 4 + n_lanes_view + n_lanes_view + 2 + 2   # 수업 31 + 경로 2 + 신호 2
-        self.obs_dim += (4 if self.conflict_obs else 0) + (3 if self.speed_limit_obs else 0)   # [12팀 11/16] 선택 관측
-        self.obs_dim += 1 if self.signal_time_obs else 0                                        # [12팀 11/17] 신호 남은 시간
-        self.obs_dim += 6 if self.lane_dir_obs else 0                                           # [12팀 11/19] 둘째 분기 2 + 차로 진행 방향 4
-        # [12팀 11/19] 칸 이름 → 번호 (mdp_config 관측 주석). 번호를 직접 쓰지 말고 이 표로 읽는다 (check_env.rule_policy 등).
+        self.obs_dim += (4 if self.conflict_obs else 0) + (3 if self.speed_limit_obs else 0)   # 선택 관측
+        self.obs_dim += 1 if self.signal_time_obs else 0                                        # 신호 남은 시간
+        self.obs_dim += 6 if self.lane_dir_obs else 0                                           # 둘째 분기 2 + 차로 진행 방향 4
+        # 관측 칸의 이름과 번호 대응. 직접 번호 대신 이름으로 읽는다.
         #   43차원(lane_dir_obs 끔, 기존 모델용): 경로 2 · 신호 2 · 경합 4 · 제한속도 3 · 신호 남은 시간 1
         #   49차원(lane_dir_obs 켬): 경로(분기 2개) 4 · 내 차로 진행 방향 4 · 신호 2 · 신호 남은 시간 1 · 경합 4 · 제한속도 3
         _blocks = {"route": ["route_dir1", "route_dist1"], "route2": ["route_dir2", "route_dist2"],
@@ -336,15 +319,15 @@ class SumoHighwayEnv(gym.Env):
         cmd = [
             binary, "-c", self.cfg_path,
             "--step-length", str(self.step_length),
-            # 충돌한 차량을 시뮬레이션에서 제거. (기본값 teleport는 순간이동시켜버려서
-            # RL 학습에는 부적합. remove로 해야 "충돌 → 에피소드 종료"가 깔끔함)
+            # 충돌한 차량을 제거해 해당 에피소드가 끝나도록 한다.
+            # 충돌을 순간이동으로 넘기지 않고 실패로 기록하기 위한 설정이다.
             "--collision.action", "remove",
             # 교차로(junction) 안의 충돌도 검사한다. 기본값은 교차로 내부 충돌을 무시해서
             # 교차로·회전교차로가 있는 도로에서는 충돌률이 실제보다 낮게 나온다.
             "--collision.check-junctions", "true",
             "--no-warnings", "true",   # 콘솔 경고 끄기
             "--no-step-log", "true",   # 스텝 로그 끄기
-            # 매 에피소드 다른 시드 → 배경 교통 패턴이 달라져서 과적합 방지
+            # 에피소드마다 배경 교통을 달리해 특정 차량 배치에 과적합하지 않게 한다.
             "--seed", str(sampled_seed if sumo_seed is None else sumo_seed),
         ]
         if self.network and self.scenario:
@@ -375,12 +358,12 @@ class SumoHighwayEnv(gym.Env):
         - 위치: start_offset ~ (길이 - end_margin), 차선별 독립 배치
         - 간격: prefill_spacing × (1 ± jitter) 무작위
         - 타입: controllers 확률 비율로 샘플링 (rou.xml의 vType과 동일)
-        - 속도: departSpeed="max" → 각 개체가 "자기 허용 최고속도"로 시작.
+        - 속도: departSpeed="max"  /  각 개체가 "자기 허용 최고속도"로 시작.
           컨트롤러별 max_speed/speedDev 차등이 프리필에도 그대로 반영되고,
           개체별 무작위 speedFactor 때문에 숫자 속도를 주면 SUMO가
           "허용속도 초과"로 거부할 수 있는 문제도 함께 피한다.
         배치된 차들은 SUMO의 각자 컨트롤러(IDM 등)가 정상적으로 운전한다.
-        """
+"""
         rng = np.random.default_rng()
         count = 0
         # 차선별 간격 배율 (없으면 전 차선 동일). 인덱스 0 = 맨 오른쪽.
@@ -423,7 +406,7 @@ class SumoHighwayEnv(gym.Env):
         want_sc = (options or {}).get("scenario")
         if want_sc is not None and want_sc not in ("before", "after"):
             raise ValueError(f"시나리오는 before/after: {want_sc}")
-        # [12팀 11/19] 시나리오 · 경로를 둘 다 안 줬고 시나리오가 "mixed"면 쓸 수 있는 (시나리오, 경로) 쌍 전체에서 같은 확률로 뽑는다
+        # 시나리오 · 경로를 둘 다 안 줬고 시나리오가 "mixed"면 쓸 수 있는 (시나리오, 경로) 쌍 전체에서 같은 확률로 뽑는다
         # (전에는 시나리오를 반반으로 먼저 뽑아 경로가 2개뿐인 통제 전 경로가 더 자주 나왔다). 하나라도 주면 예전 동작 · 난수 순서 그대로.
         pair_route = None
         if (want_sc is None and (options or {}).get("route") is None and len(self.scenarios) > 1 and self.network):
@@ -438,7 +421,7 @@ class SumoHighwayEnv(gym.Env):
         self._start_sumo(sumo_seed=sumo_seed)
 
         # 보행화 후: 잠수교 차로를 보행자 전용으로 (도로는 그대로, 차량만 통제). 화면에는 빨간 표시.
-        # 잠수교 횡단보도 신호(C-ITS 4616 · 24616)는 통제 후 점멸 운영 (11/11 기록) → 신호를 끈다
+        # 통제 후 잠수교의 횡단보도 신호 두 곳은 꺼진 상태로 처리한다.
         if self.network and self.scenario == "after":
             apply_after_closure(traci, self.closed_after, self.tls_before_only, mark=self.gui)
         # 지금 작동 중인 신호 프로그램의 현시 목록 (get_signal_state가 "AV 방향 신호색이 바뀔 때까지"를 계산할 때 씀)
@@ -476,7 +459,7 @@ class SumoHighwayEnv(gym.Env):
             self.route_name = want or str(np.random.choice(ids))
             route_id = f"av_{self.route_name}"
 
-        # 출발 차로 · 출발 속도 옵션 (주지 않으면 __init__에서 정한 EGO 값 그대로 — 기존 동작과 같음)
+        # 출발 차로 · 출발 속도 옵션 (주지 않으면 __init__에서 정한 EGO 값 그대로 : 기존 동작과 같음)
         #   options["depart_lane"]: 정수 = 그 차로, "random" = 출발 엣지의 승용차 허용 차로 중 하나 (전역 np.random)
         #   options["depart_speed"]: "limit" = 출발 차로 제한속도 × 0.8
         # 무작위 차로는 위의 SUMO --seed · 시나리오 · 경로 추첨 뒤에 뽑아 기존 난수 순서를 바꾸지 않는다.
@@ -494,7 +477,7 @@ class SumoHighwayEnv(gym.Env):
                     car_lanes.append(i)
             if opt_lane is not None:
                 if str(opt_lane).lower() == "random":
-                    # [12팀 11/19] 경로별 출발 차로 범위 road_spec.AV_ROUTES[...]["depart_lanes"] (없으면 승용 차로 전부)와의 교집합
+                    # 경로별 출발 차로 범위 road_spec.AV_ROUTES[...]["depart_lanes"] (없으면 승용 차로 전부)와의 교집합
                     dl = (_road_spec().AV_ROUTES.get(self.route_name) or {}).get("depart_lanes") if self.network else None
                     pick = [i for i in car_lanes if i in dl] if dl else car_lanes
                     pick = pick or car_lanes
@@ -514,15 +497,15 @@ class SumoHighwayEnv(gym.Env):
                         vlim = min(traci.lane.getMaxSpeed(f"{first_edge}_{i}") for i in car_lanes)
                     depart_speed = f"{0.8 * vlim:.3f}"
 
-        # ego 차량 투입 — 반드시 "경로 시작점(0m)"에서 출발
-        # SUMO 운전자 모드(반포 도로망)는 사람 운전자 차종 ego_sumo (road_config.EGO["sumo_vtype"]) — RL 모드는 ego_type
+        # ego 차량 투입 : 반드시 "경로 시작점(0m)"에서 출발
+        # SUMO 운전자 모드(반포 도로망)는 사람 운전자 차종 ego_sumo (road_config.EGO["sumo_vtype"]) : RL 모드는 ego_type
         traci.vehicle.add(self.ego_id, route_id, typeID=("ego_sumo" if self.sumo_driver and self.network else "ego_type"),
                           departLane=depart_lane,
                           departPos="0",
                           departSpeed=depart_speed)
 
         if not self.sumo_driver:
-            # ★ 중요: speedMode=0 → SUMO의 내장 안전장치(자동 안전제동 등)를 전부 끔.
+            # speedMode=0으로 SUMO의 자동 안전 제동 등을 끈다.
             #   이걸 꺼야 RL이 속도를 온전히 제어하고, 잘못 배우면 실제로 충돌한다.
             #   (켜두면 SUMO가 알아서 브레이크를 밟아줘서 충돌이 거의 안 나고,
             #    그러면 "충돌 회피"라는 학습 신호 자체가 사라진다)
@@ -541,11 +524,11 @@ class SumoHighwayEnv(gym.Env):
         while self.ego_id not in traci.vehicle.getIDList() and _wait < _wait_max:
             traci.simulationStep()
             _wait += 1
-        # [12팀 11/20] 대체 경로 — 위 방식으로 _wait_max 안에 못 들어간 판에서만 작동한다 (정상 삽입 판은 한 스텝도 안 바뀜).
+        # 대체 경로 : 위 방식으로 _wait_max 안에 못 들어간 판에서만 작동한다 (정상 삽입 판은 한 스텝도 안 바뀜).
         #   정체가 아니라 출발 속도(제한속도×0.8)가 입구에 막 들어온 느린 배경차보다 빨라 안전한 틈이 안 나는 경우다
         #   (oly-jamsu wb_a 입구 10~35 m 차량 4~10 m/s). 대기 중인 ego를 빼고 같은 차로·같은 위치(0 m)에서
         #   출발 속도만 입구 근처(앞 50 m) 차량의 최저 속도로 낮춰 다시 넣고 (_wait_max 스텝), 그래도 안 되면 SUMO가
-        #   매 스텝 앞차에 맞춰 고르는 안전 최대 속도("max")로 넣는다 (4×_wait_max 스텝 — 입구에 배경차 삽입 대기열이
+        #   매 스텝 앞차에 맞춰 고르는 안전 최대 속도("max")로 넣는다 (4×_wait_max 스텝 : 입구에 배경차 삽입 대기열이
         #   60~90대 쌓여 빈자리를 먼저 차지하므로 틈이 날 때까지 시간이 걸린다).
         #   배경 교통(차량 수 · 배치 · 순서)은 그대로 두고, 전역 np.random은 쓰지 않는다.
         if self.ego_id not in traci.vehicle.getIDList() and self.network:
@@ -584,7 +567,7 @@ class SumoHighwayEnv(gym.Env):
                 f"ego 삽입 실패: 도로 입구가 {_wait_max}스텝 이상 막혀 있습니다. "
                 + ("TRAFFIC['demand_scale']을 낮추거나 AV 출발 도로(bp_nb) 정체를 확인하세요." if self.network
                    else "TRAFFIC['vehs_per_hour']를 낮추거나 depart_speed를 확인하세요."))
-        if self.sumo_driver and self.sumo_min_gap:      # [12팀 11/17] 시범 운전자 정지 간격 (수집 --demo-min-gap)
+        if self.sumo_driver and self.sumo_min_gap:      # 시범 운전자 정지 간격 (수집 --demo-min-gap)
             traci.vehicle.setMinGap(self.ego_id, float(self.sumo_min_gap))
 
         # GUI 기본 시점: ego를 화면 중앙에서 추적하고 충분히 가까이 확대한다.
@@ -611,7 +594,7 @@ class SumoHighwayEnv(gym.Env):
         self.teleports = 0               # 이번 에피소드 동안 순간이동한 차량 수 (전체 차량)
         self.safety_interventions = 0    # 이번 에피소드 동안 안전장치가 속도 명령을 낮춘 스텝 수
         self._last_route_obs = [0.0, 1.0]    # 교차로 안에서 유지할 경로 관측 (방향 · 분기 거리)
-        self._last_lane_dir_obs = [0.0, 1.0, 1.0, 1.0, 1.0, 1.0]   # [12팀 11/19] 같은 식으로 유지할 [33..38]
+        self._last_lane_dir_obs = [0.0, 1.0, 1.0, 1.0, 1.0, 1.0]   # 같은 식으로 유지할 [33..38]
         # 실제 출발 차로 (삽입 직후 ego가 있는 차로 번호)
         self.depart_lane_actual = int(traci.vehicle.getLaneIndex(self.ego_id))
         return self._get_obs(), {"route": self.route_name, "scenario": self.scenario,
@@ -652,7 +635,7 @@ class SumoHighwayEnv(gym.Env):
                     return None
         elif abs(offset) >= 2:
             # 두 칸 이상 옆 차선: SUMO getNeighbors는 "바로 옆"만 지원하므로
-            # 차선 직접 스캔(_scan_lane_neighbors — 같은 edge의 차량 목록을
+            # 차선 직접 스캔(_scan_lane_neighbors : 같은 edge의 차량 목록을
             # 훑어 가장 가까운 앞/뒤를 찾음)으로 감지한다.
             front, rear = self._scan_lane_neighbors(offset)
             res = front if leader else rear
@@ -672,8 +655,8 @@ class SumoHighwayEnv(gym.Env):
         return float(gap), traci.vehicle.getSpeed(vid)
 
     def _route_pairs(self):
-        """[12팀 11/19] 쓸 수 있는 (시나리오, 경로) 쌍 — road["av_routes"] × road_spec.AV_ROUTES[...]["scenarios"] (비어 있으면 모든 시나리오),
-        이 환경의 시나리오 목록 안에서. 순서 고정 (경로 목록 순서 → 시나리오 순서)."""
+        """쓸 수 있는 (시나리오, 경로) 쌍 : road["av_routes"] × road_spec.AV_ROUTES[...]["scenarios"] (비어 있으면 모든 시나리오),
+        이 환경의 시나리오 목록 안에서. 순서 고정 (경로 목록 순서  /  시나리오 순서)."""
         spec = _road_spec().AV_ROUTES
         out = []
         for r in self.av_routes:
@@ -684,8 +667,8 @@ class SumoHighwayEnv(gym.Env):
         return out
 
     def _neighbor_seen(self, offset: int, leader: bool):
-        """[12팀 11/19] lane_dir_obs 켬일 때의 관측용 _neighbor: 옆 차로(±1)는 getNeighbors와 차로 직접 스캔 중 더 가까운 쪽
-        (안전 게이트 _lane_change_is_safe의 closer와 같은 방식), ±2는 스캔. 간격이 음수(AV와 겹쳐 나란히)인 차는 버리지 않고 0으로 —
+        """lane_dir_obs 켬일 때의 관측용 _neighbor: 옆 차로(±1)는 getNeighbors와 차로 직접 스캔 중 더 가까운 쪽
+        (안전 게이트 _lane_change_is_safe의 closer와 같은 방식), ±2는 스캔. 간격이 음수(AV와 겹쳐 나란히)인 차는 버리지 않고 0으로 :
         나란히 있는 차는 앞 거리 0 · 뒤 거리 0으로 양쪽에 다 나타난다 (수업 원본은 관측에서 빠져 차로 변경 판단을 못 했다).
         현재 차로(0)는 _neighbor 그대로. visibility 밖이면 None."""
         if offset == 0:
@@ -741,12 +724,12 @@ class SumoHighwayEnv(gym.Env):
         -1 : 그 차선이 존재하지 않음
          1 : visibility 이내에서 계속 이어짐
         0~1: (차선이 끝나는 지점까지의 거리 / visibility)
-             → 값이 작을수록 곧 차선이 사라진다는 경고
+              /  값이 작을수록 곧 차선이 사라진다는 경고
 
         일반화 원리: 차선의 남은 길이와, 차선 끝에서 다음 edge로의
         연결(link) 존재 여부를 SUMO 네트워크에서 직접 조회한다.
         차선 감소/합류 지점은 "링크 없는 차선의 끝"으로 자연히 감지된다.
-        """
+"""
         try:
             edge = traci.vehicle.getRoadID(self.ego_id)
             if edge.startswith(":"):          # 교차로(junction) 내부 통과 중
@@ -776,13 +759,13 @@ class SumoHighwayEnv(gym.Env):
                최대 수용 대수 = 사용가능거리 / density_veh_length
 
         인코딩 관례 (막힘 정도로 읽히도록):
-            1.0 : 차선이 없거나 사실상 진입 불가  ← "꽉 찬 것"처럼 취급해서
+            1.0 : 차선이 없거나 사실상 진입 불가    "꽉 찬 것"처럼 취급해서
                   에이전트가 자연스럽게 회피하게 만든다
             0.0 : 텅 빈 차선
         일반화: 차선이 시야보다 짧으면 link를 따라 다음 차선까지 이어서 센다.
         곧 끊기는 차선(link 없음)은 남은 거리만큼만 세므로 분모가 줄어
-        같은 대수여도 밀도가 높게 나온다 → "끊기는 차선에 차가 몰려있음" 신호.
-        """
+        같은 대수여도 밀도가 높게 나온다  /  "끊기는 차선에 차가 몰려있음" 신호.
+"""
         try:
             edge = traci.vehicle.getRoadID(self.ego_id)
             if edge.startswith(":"):          # 교차로 내부: 중립값
@@ -791,7 +774,7 @@ class SumoHighwayEnv(gym.Env):
             if lane_index < 0 or lane_index >= traci.edge.getLaneNumber(edge):
                 return 1.0                    # 차선 없음 = 꽉 참 취급
             lane_id = f"{edge}_{lane_index}"
-            # [12팀] 보도 · 버스전용처럼 승용차가 못 쓰는 차로도 "없는 차로" (_lane_connectivity · 차로 변경과 같게, 11/15)
+            # 보도 · 버스전용처럼 승용차가 못 쓰는 차로도 "없는 차로" (_lane_connectivity · 차로 변경과 같게, 11/15)
             _allowed = traci.lane.getAllowed(lane_id)
             if _allowed and "passenger" not in _allowed:
                 return 1.0
@@ -828,7 +811,7 @@ class SumoHighwayEnv(gym.Env):
     def get_detected_vehicles(self):
         """현재 관측 시야에 들어온(=감지된) 배경차들의 좌표 목록을 반환.
 
-        데이터셋 수집용 부가 정보 — 관측 벡터에는 들어가지 않는다.
+        데이터셋 수집용 부가 정보 : 관측 벡터에는 들어가지 않는다.
         "감지"의 정의는 관측과 동일: 관측 대상 차선(obs_offsets 범위)에서
         ego 기준 종방향 ±visibility(W) 이내에 있는 차량.
 
@@ -837,7 +820,7 @@ class SumoHighwayEnv(gym.Env):
              "rel_pos": ego 기준 종방향 상대거리(m, 앞 +), "speed": m/s,
              "lane_offset": ego 차선 기준 오프셋(+왼쪽)}
         ego가 없으면 빈 리스트.
-        """
+"""
         out = []
         if self.ego_id not in traci.vehicle.getIDList():
             return out
@@ -868,15 +851,15 @@ class SumoHighwayEnv(gym.Env):
         return out
 
     def _get_obs(self):
-        # ego가 이미 사라졌다면(충돌/도착) 0벡터 반환 — 종료 직전 마지막 관측용
+        # ego가 이미 사라졌다면(충돌/도착) 0벡터 반환 : 종료 직전 마지막 관측용
         if self.ego_id not in traci.vehicle.getIDList():
             return np.zeros(self.obs_dim, dtype=np.float32)
 
         v = traci.vehicle.getSpeed(self.ego_id)
         obs = [v / self.vmax]                      # [0] 내 절대속도
 
-        # ----- 5개 차선(좌2→좌1→현재→우1→우2)의 선행/후행 상대거리·상대속도 -----
-        # [12팀 11/19] lane_dir_obs 켬: 옆 차로 차량을 getNeighbors · 차로 직접 스캔 중 가까운 쪽으로, 나란히 있는 차는 거리 0 (_neighbor_seen)
+        # ----- 5개 차선(좌2 / 좌1 / 현재 / 우1 / 우2)의 선행/후행 상대거리·상대속도 -----
+        # lane_dir_obs 켬: 옆 차로 차량을 getNeighbors · 차로 직접 스캔 중 가까운 쪽으로, 나란히 있는 차는 거리 0 (_neighbor_seen)
         nb = self._neighbor_seen if self.lane_dir_obs else self._neighbor
         for offset in self.obs_offsets:
             lead = nb(offset, leader=True)
@@ -903,8 +886,8 @@ class SumoHighwayEnv(gym.Env):
         for offset in self.obs_offsets:
             obs.append(self._lane_density(offset))
 
-        # ----- [12팀] 경로 · 신호 · 선택 관측 — 블록 순서는 __init__의 self._obs_blocks (칸 번호표 self.obs_index와 같은 순서) -----
-        #   route: 다음 분기 방향 · 거리 (11/19 lane_dir_obs 켬: 분기 2개 새 정의 — route2 · reach도 같은 계산에서 나온다)
+        # ----- 경로 · 신호 · 선택 관측 : 블록 순서는 __init__의 self._obs_blocks (칸 번호표 self.obs_index와 같은 순서) -----
+        #   route: 다음 분기 방향 · 거리 (11/19 lane_dir_obs 켬: 분기 2개 새 정의 : route2 · reach도 같은 계산에서 나온다)
         #   signal: 앞 신호색 · 정지선 거리 / sig_time: 신호 남은 시간 (C-ITS) / conflict: 경합 차량 / speed: 차로 제한속도
         if self.lane_dir_obs:
             route8 = self._route_obs2()
@@ -926,18 +909,18 @@ class SumoHighwayEnv(gym.Env):
         return np.clip(np.array(obs, dtype=np.float32), -1.0, 1.0)
 
     # ==================================================================
-    # [12팀 11/15] 경로 · 신호 관측 (mdp_config.OBSERVATION 주석 [31..38])
+    # 경로 · 신호 관측 (mdp_config.OBSERVATION 주석 [31..38])
     # ==================================================================
     _SIG_OBS = {"green": 1.0, "yellow": 0.0, "red": -1.0, "off": 1.0}
 
-    # SUMO 연결 방향 → 관측 값 (차로 변경과 같은 부호: 왼쪽 +1 · 오른쪽 -1). t = 유턴(왼쪽으로 돈다)
+    # 연결 방향은 좌 +1·직진 0·우 -1로 관측한다. 유턴 t는 왼쪽으로 취급한다.
     _TURN_DIR = {"l": 1.0, "L": 1.0, "t": 1.0, "s": 0.0, "r": -1.0, "R": -1.0}
 
     def _route_obs(self):
         """[31] 다음 분기에서 경로가 가는 방향 (좌 +1 · 직진 0 · 우 -1, 분기 없음 0), [32] 다음 분기까지 거리/route_horizon.
 
-        내비게이션의 "300 m 앞 우회전"과 같은 지도 수준 정보만 준다 — 어느 차로로 가야 하는지는 주지 않는다
-        (11/17 조교 공지 "1차 컨설팅 후 자주 묻는 질문": 라우팅은 가능, 차선 같은 세밀한 주행 정보는 안 됨 →
+        내비게이션의 "300 m 앞 우회전"과 같은 지도 수준 정보만 준다 : 어느 차로로 가야 하는지는 주지 않는다
+        (11/17 조교 공지 "1차 컨설팅 후 자주 묻는 질문": 라우팅은 가능, 차선 같은 세밀한 주행 정보는 안 됨  /
         11/15~17의 차로별 경로 계속 거리 [31..35](getBestLanes)를 뺐다). 교차로 안(내부 차로)에서는 직전 값을 쓴다."""
         try:
             edge = traci.vehicle.getRoadID(self.ego_id)
@@ -984,7 +967,7 @@ class SumoHighwayEnv(gym.Env):
         while d < self.route_horizon:
             e = route[idx]
             if idx + 1 >= len(route):
-                return self.route_horizon, 0.0           # 경로 끝 — 더 갈라질 곳 없음
+                return self.route_horizon, 0.0           # 경로 끝 : 더 갈라질 곳 없음
             if self._is_branch(e):
                 return max(d, 0.0), self._turn_dir(e, route[idx + 1])
             idx += 1
@@ -992,7 +975,7 @@ class SumoHighwayEnv(gym.Env):
         return self.route_horizon, 0.0
 
     def _turn_dir(self, edge: str, nxt: str) -> float:
-        """edge 끝에서 nxt 도로로 가는 연결의 방향 (SUMO 연결 방향 l · L · t / s / r · R → +1 / 0 / -1).
+        """edge 끝에서 nxt 도로로 가는 연결의 방향 (SUMO 연결 방향 l · L · t / s / r · R  /  +1 / 0 / -1).
         차로마다 방향 표기가 다를 수 있어 가장 많은 값을 쓴다. 도로망은 고정이라 (edge, nxt)별로 한 번만 계산."""
         key = (edge, nxt)
         if key not in self._turn_cache:
@@ -1005,14 +988,14 @@ class SumoHighwayEnv(gym.Env):
         return self._turn_cache[key]
 
     # ------------------------------------------------------------------
-    # [12팀 11/19] 분기 2개 · 차로 진행 방향 (lane_dir_obs — mdp_config 주석 [31..38])
-    # 설계 원본은 sumolib로 쓴 정적 검증 스크립트 (rank · lane_reach · route_dirs) — 같은 정의를 traci로 옮겼다.
+    # 분기 2개 · 차로 진행 방향 (lane_dir_obs : mdp_config 주석 [31..38])
+    # 설계 원본은 sumolib로 쓴 정적 검증 스크립트 (rank · lane_reach · route_dirs) : 같은 정의를 traci로 옮겼다.
     # ------------------------------------------------------------------
     _LANE_REACH_DEPTH = 12        # 차로 연결을 따라가는 최대 단계 (설계 원본과 같음)
 
     @staticmethod
     def _shape_point(shape, offset):
-        """폴리라인 shape 위 시작에서 offset m 지점 (길이를 넘으면 끝점) — sumolib.geomhelper.positionAtShapeOffset과 같은 뜻."""
+        """폴리라인 shape 위 시작에서 offset m 지점 (길이를 넘으면 끝점) : sumolib.geomhelper.positionAtShapeOffset과 같은 뜻."""
         rest = float(offset)
         for (xa, ya), (xb, yb) in zip(shape[:-1], shape[1:]):
             seg = float(np.hypot(xb - xa, yb - ya))
@@ -1035,7 +1018,7 @@ class SumoHighwayEnv(gym.Env):
         return self._lane_out_cache[key]
 
     def _rank(self, edge: str) -> dict:
-        """분기 엣지 edge에서 나가는 도로들을 진행 방향 기준 왼쪽 → 오른쪽으로 순위: {도로: +1 맨 왼쪽 · 0 사이 · -1 맨 오른쪽}.
+        """분기 엣지 edge에서 나가는 도로들을 진행 방향 기준 왼쪽  /  오른쪽으로 순위: {도로: +1 맨 왼쪽 · 0 사이 · -1 맨 오른쪽}.
         좌우 = 분기 엣지 끝의 진행 방향 벡터(0번 차로 모양의 마지막 구간)에 대해, 나가는 도로 0번 차로의 30 m 지점(짧으면 끝)이
         왼쪽으로 얼마나 있는가. (시나리오, 엣지)별 캐시 (나가는 도로 목록이 시나리오마다 다를 수 있다)."""
         key = (self.scenario, edge)
@@ -1073,7 +1056,7 @@ class SumoHighwayEnv(gym.Env):
             if self._is_branch(e):
                 rk = self._rank(e)
                 mine = frozenset(rk[t.rsplit("_", 1)[0]] for t, _ in outs if t.rsplit("_", 1)[0] in rk)
-                terms[1 - k].append((off, mine))      # k = 남은 분기 수 - 1 → 0이면 이 분기가 찾던 것
+                terms[1 - k].append((off, mine))      # 남은 분기 수에서 1을 뺀 k가 0이면 찾던 분기에 도달한 것이다.
                 if k == 0:
                     return
                 for t, ln in outs:
@@ -1087,7 +1070,7 @@ class SumoHighwayEnv(gym.Env):
         return terms
 
     def _lane_reach(self, lane: str, d0: float):
-        """[35..38]: 지금 차로(lane, 차로 끝까지 d0 m)에서 첫째 · 둘째 분기의 (왼쪽 가능, 오른쪽 가능) — 안 보이면 (1, 1)."""
+        """[35..38]: 지금 차로(lane, 차로 끝까지 d0 m)에서 첫째 · 둘째 분기의 (왼쪽 가능, 오른쪽 가능) : 안 보이면 (1, 1)."""
         out = []
         for k_terms in self._lane_reach_terms(lane):
             seen = [s for off, s in k_terms if d0 + off <= self.branch_horizon]
@@ -1099,7 +1082,7 @@ class SumoHighwayEnv(gym.Env):
         return out
 
     def _route_dirs(self):
-        """경로의 앞 분기 2개 [(경로가 가는 쪽 +1/0/-1, 분기 엣지 끝까지 m)] — branch_horizon 안의 것만."""
+        """경로의 앞 분기 2개 [(경로가 가는 쪽 +1/0/-1, 분기 엣지 끝까지 m)] : branch_horizon 안의 것만."""
         route = traci.vehicle.getRoute(self.ego_id)
         idx = traci.vehicle.getRouteIndex(self.ego_id)
         d = traci.lane.getLength(traci.vehicle.getLaneID(self.ego_id)) - traci.vehicle.getLanePosition(self.ego_id)
@@ -1116,7 +1099,7 @@ class SumoHighwayEnv(gym.Env):
         return out
 
     def _route_obs2(self):
-        """lane_dir_obs 켬: [31..38] 8개 (첫 분기 방향 · 거리, 둘째 분기 방향 · 거리, 내 차로의 진행 가능 방향 4개 — 칸 번호는 obs_index).
+        """lane_dir_obs 켬: [31..38] 8개 (첫 분기 방향 · 거리, 둘째 분기 방향 · 거리, 내 차로의 진행 가능 방향 4개 : 칸 번호는 obs_index).
         교차로 안(내부 차로)에서는 8개 모두 직전 값."""
         last = list(self._last_route_obs) + list(self._last_lane_dir_obs)
         try:
@@ -1138,7 +1121,7 @@ class SumoHighwayEnv(gym.Env):
             return last
 
     def _wrong_lane(self) -> bool:
-        """[12팀 11/19] 잘못된 차로: 일반 엣지 위에서 차로 끝까지 wrong_lane_end_m 이내이고, 지금 차로에서 차로 변경 없이
+        """잘못된 차로: 일반 엣지 위에서 차로 끝까지 wrong_lane_end_m 이내이고, 지금 차로에서 차로 변경 없이
         경로를 따라 (짧은 엣지는 건너뛰어) 다음 긴 엣지까지 갈 수 없다 (_lane_continues)."""
         try:
             road = traci.vehicle.getRoadID(self.ego_id)
@@ -1155,11 +1138,11 @@ class SumoHighwayEnv(gym.Env):
         except traci.TraCIException:
             return False
 
-    SHORT_EDGE = 40.0    # m. [12팀 11/19] 이보다 짧은 엣지는 차로를 바꿀 수 없는 구간으로 보고 잘못된 차로 판정에서 건너뛴다
+    SHORT_EDGE = 40.0    # m. 이보다 짧은 엣지는 차로를 바꿀 수 없는 구간으로 보고 잘못된 차로 판정에서 건너뛴다
 
     def _lane_continues(self, lane: str, route: tuple, idx: int) -> bool:
         """지금 차로(route[idx] 위)에서 차로 변경 없이 승용차 연결을 따라가, 경로의 다음 엣지들 중 SHORT_EDGE 미만 엣지를 연달아 지나
-        처음 만나는 긴 엣지(또는 경로 끝)까지 갈 수 있는가. (예: goga_nb 0번 → m1(6 m) 2번은 이어지지만 그 다음 und_n으로는 못 간다.)
+        처음 만나는 긴 엣지(또는 경로 끝)까지 갈 수 있는가. (예: goga_nb 0번  /  m1(6 m) 2번은 이어지지만 그 다음 und_n으로는 못 간다.)
         (시나리오, 차로, 경로 인덱스, 경로)로 캐시."""
         key = (self.scenario, lane, idx, route)
         if key in self._continue_cache:
@@ -1178,7 +1161,7 @@ class SumoHighwayEnv(gym.Env):
         return ok
 
     def _conflict_obs(self):
-        """[35..38] 교차로 · 합류에서 AV와 같은 곳을 지나려는 경합 차량 (회전교차로 진입 · 합류부 끼어들기 — 같은 차로 · 옆 차로
+        """[35..38] 교차로 · 합류에서 AV와 같은 곳을 지나려는 경합 차량 (회전교차로 진입 · 합류부 끼어들기 : 같은 차로 · 옆 차로
         관측으로는 바로 앞에 올 때까지 안 보이고 안전장치도 못 막는다, 11/16 검토).
 
         traci.vehicle.getJunctionFoes(ego, conflict_horizon): AV 앞 conflict_horizon m 안의 교차로에서 AV 경로와 겹치는 연결로
@@ -1219,9 +1202,9 @@ class SumoHighwayEnv(gym.Env):
                 if float(f[3]) > 0.0 and float(f[4]) > 0.0]          # 둘 중 하나가 이미 경합 지점을 벗어난 차는 뺀다
 
     def _speed_limit_obs(self):
-        """[39..41] 차로 제한속도 (속도 보상의 기준이자 속도 명령 상한인데 관측에 없었다 — 30 km/h 지하차도 · 회전교차로 앞에서
-        환경이 강제로 줄이는 것을 미리 대비할 수 없었다, 11/16 검토).
-          [39] 지금 차로 제한속도 / vmax (교차로 안이면 그 내부 차로 값 — 속도 상한과 같은 기준)
+        """[39..41] 차로 제한속도 (속도 보상 · 과속 감점의 기준 : 30 km/h 지하차도 · 회전교차로 앞에서 미리 줄일 수 있게, 11/16 검토.
+        11/24부터 환경이 제한속도로 속도 명령을 자르지 않으므로 지키는 것은 정책 몫이다).
+          [39] 지금 차로 제한속도 / vmax (교차로 안이면 그 내부 차로 값 : 속도 상한과 같은 기준)
           [40] 경로를 따라 다음에 바뀌는 제한속도 / vmax (route_horizon 안에 없으면 지금 값)
           [41] 그 지점까지 거리 / route_horizon (0~1, 없으면 1)"""
         H = self.route_horizon
@@ -1275,14 +1258,14 @@ class SumoHighwayEnv(gym.Env):
         return [1.0 if rem is None else float(np.clip(rem / self.signal_time_horizon, 0.0, 1.0))]
 
     # ==================================================================
-    # 1 스텝 진행: 행동 적용 → 시뮬레이션 1스텝 → 보상/종료 판정
+    # 한 스텝은 행동 적용, 시뮬레이션, 보상·종료 판정 순서로 진행한다.
     # ==================================================================
     def _quantize_lane_change(self, raw: float) -> int:
         """연속 policy 출력을 실제 차선 명령 {-1,0,+1}로 변환한다.
 
         +1 = 왼쪽, 0 = 유지, -1 = 오른쪽. SUMO 차선 index가 왼쪽으로
         갈수록 증가하는 규약과 동일해서 해석이 직관적이다.
-        """
+"""
         raw = float(np.clip(raw, -1.0, 1.0))
         if raw >= self.lane_change_threshold:
             return 1
@@ -1297,7 +1280,7 @@ class SumoHighwayEnv(gym.Env):
         읽는데, "방금 스폰된 차량"은 다음 스텝까지 이 캐시에 없어서
         도로 입구 근처에서 사각지대가 생긴다. 차선의 차량 목록을 직접
         훑으면 이미 삽입된 차량은 전부 잡힌다.
-        """
+"""
         try:
             edge = traci.vehicle.getRoadID(self.ego_id)
             li = traci.vehicle.getLaneIndex(self.ego_id) + direction
@@ -1337,7 +1320,7 @@ class SumoHighwayEnv(gym.Env):
               + 접근 여유: gap > (뒤차속도 − 내속도)⁺ × 1s   (뒤가 더 빠를 때)
         이웃은 getNeighbors 결과와 차선 직접 스캔 결과 중 "더 가까운 쪽"을
         쓴다 (스폰 직후 차량 사각지대 보완).
-        """
+"""
         # 출발 뒤 달린 거리 기준 (직선 도로에서는 차선 위치와 같다. 실제 도로망은
         # 엣지가 짧아 차선 위치로 판정하면 짧은 엣지마다 차선변경이 막힌다)
         if traci.vehicle.getDistance(self.ego_id) < self.lc_spawn_protect:
@@ -1374,11 +1357,11 @@ class SumoHighwayEnv(gym.Env):
         """가능하고 "안전한" 경우에만 차선변경을 적용하고 성공 여부를 반환.
 
         안전 게이트(_lane_change_is_safe)를 통과하지 못한 명령은 실행하지
-        않고 False를 반환한다 → step()에서 "불가능한 명령"과 동일하게
+        않고 False를 반환한다  /  step()에서 "불가능한 명령"과 동일하게
         invalid_action_penalty가 부과된다. 즉 에이전트 입장에서
         "위험한 변경 = 실행도 안 되고 감점"이라, 측면충돌로 즉사하며
         배우는 대신 안전한 타이밍을 고르는 쪽으로 학습이 유도된다.
-        """
+"""
         if self.ego_id not in traci.vehicle.getIDList():
             return False
         try:
@@ -1412,7 +1395,7 @@ class SumoHighwayEnv(gym.Env):
             return self.vmax
 
     def _safe_speed(self):
-        """[12팀] 안전장치: 같은 차로 앞차가 최대 감속(EGO decel)으로 서도 min_gap을 남기고 설 수 있는 이번 스텝 최고 속도.
+        """안전장치: 같은 차로 앞차가 최대 감속(EGO decel)으로 서도 min_gap을 남기고 설 수 있는 이번 스텝 최고 속도.
         Krauss 안전 속도식 v = -b·τ + sqrt((b·τ)² + v_l² + 2·b·(gap - min_gap)), τ = 스텝 길이. 앞차가 없으면 None."""
         res = traci.vehicle.getLeader(self.ego_id, self.safety_lookahead)
         if res is None or res[0] == "":
@@ -1432,7 +1415,7 @@ class SumoHighwayEnv(gym.Env):
         return bool(nxt) and nxt[0][2] <= self.RED_WAIT_RANGE and _SIG_GROUP.get(nxt[0][3]) in ("red", "yellow")
 
     def _far_stop_at_red(self, ego_speed, ego_gap) -> bool:
-        """[12팀 11/18] 적색 신호 앞 먼 정지: 서 있고(1 m/s 미만) 경로상 앞 신호가 적색(황색 제외) · 정지선이 RED_WAIT_RANGE m 안인데
+        """적색 신호 앞 먼 정지: 서 있고(1 m/s 미만) 경로상 앞 신호가 적색(황색 제외) · 정지선이 RED_WAIT_RANGE m 안인데
         정지선까지 red_far_stop_gap m 넘게 남았고, 같은 차로 앞차도 없거나 그만큼 멀다. 단 정지선보다 앞에 경합 차량이 있는
         교차로 · 합류 지점(회전교차로 진입 등)이 있으면 그 양보 대기일 수 있으므로 세지 않는다."""
         far = float(self.rw.get("red_far_stop_gap", 15.0))
@@ -1450,17 +1433,17 @@ class SumoHighwayEnv(gym.Env):
             return False
 
     def get_signal_state(self):
-        """AV가 다음에 만날 신호 (데이터 칼럼 signal, privileged state — 정책 입력 아님). 앞에 신호가 없으면 None.
+        """AV가 다음에 만날 신호 (데이터 칼럼 signal, privileged state : 정책 입력 아님). 앞에 신호가 없으면 None.
 
-        tls: 신호 id — ix 신반포사거리 · xw 반포대로 북행 횡단보도 · s4032 반포대교남단 · jx1 잠수교남단 · jx2 잠수교
+        tls: 신호 id : ix 신반포사거리 · xw 반포대로 북행 횡단보도 · s4032 반포대교남단 · jx1 잠수교남단 · jx2 잠수교
              (road_spec.SIGNALS, 5곳 모두 C-ITS 실측). 경로마다 지나는 신호가 다르다
-             (side-banpo: ix → xw → s4032, goga-banpo: xw → s4032, goga-jamsu: jx1 → jx2)
-        state: AV가 가는 방향(연결 차로)의 지금 신호 — "G" 녹색 · "g" 양보 녹색(비보호 · 보행 신호 중 우회전 등) ·
+             (side-banpo: ix  /  xw  /  s4032, goga-banpo: xw  /  s4032, goga-jamsu: jx1  /  jx2)
+        state: AV가 가는 방향(연결 차로)의 지금 신호 : "G" 녹색 · "g" 양보 녹색(비보호 · 보행 신호 중 우회전 등) ·
                "y" 황색 · "r" 적색 · "O" 꺼짐(보행화 후 잠수교)
         remaining_s: 그 신호색(녹색 G·g / 황색 / 적색)이 실제로 바뀔 때까지 남은 시간 (s). 꺼진 신호는 None.
-             AV(정책)는 이 값을 모른다 — 신호 변화 예측(belief) 학습 · 빨간불 대기 분석의 정답으로 쓴다.
-        (11/15 바꿈: 이전에는 신반포사거리 고정 {phase, remaining_s} — 신호가 1곳이던 11/12 설계가 남아 있었다)
-        """
+             AV(정책)는 이 값을 모른다 : 신호 변화 예측(belief) 학습 · 빨간불 대기 분석의 정답으로 쓴다.
+        (11/15 바꿈: 이전에는 신반포사거리 고정 {phase, remaining_s} : 신호가 1곳이던 11/12 설계가 남아 있었다)
+"""
         try:
             nxt = traci.vehicle.getNextTLS(self.ego_id)
         except traci.TraCIException:
@@ -1494,7 +1477,7 @@ class SumoHighwayEnv(gym.Env):
             return None
 
     def get_sim_time(self) -> float:
-        """[12팀 11/19] 지금 시뮬레이션 시각 (s) — 데이터 칼럼 sim_time. 신호 5곳은 고정 주기라 이 값으로 모든 신호 상태를 계산할 수 있다."""
+        """지금 시뮬레이션 시각 (s) : 데이터 칼럼 sim_time. 신호 5곳은 고정 주기라 이 값으로 모든 신호 상태를 계산할 수 있다."""
         return float(traci.simulation.getTime())
 
     def get_privileged_state(self) -> dict:
@@ -1502,15 +1485,14 @@ class SumoHighwayEnv(gym.Env):
 
         agent가 실제로 받는 입력은 _get_obs()의 부분관측이고, 이 메서드는
         분석/지도신호용 privileged state만 수집한다. 정책 입력으로 쓰지 않는다.
-        """
+"""
         ids = traci.vehicle.getIDList()
         if self.ego_id not in ids:
             return {"ego_alive": False}
         try:
             x, y = traci.vehicle.getPosition(self.ego_id)
-            # [12팀 수집 최적화] 차량마다 값 7개를 하나씩 묻던 것(스텝당 약 3,000번 왕복)을 TraCI 구독으로 바꿈:
-            # 처음 보는 차량만 구독을 걸고, 이후에는 SUMO가 매 스텝 보내 주는 결과를 한 번에 읽는다.
-            # 저장되는 값·순서는 이전과 같다 (getIDList 순서, 같은 변수).
+            # TraCI 구독으로 전체 차량 상태를 묶어서 읽어 스텝별 통신 횟수를 줄인다.
+            # 캐시는 현재 시뮬레이션 스텝에서만 재사용한다.
             subs = traci.vehicle.getAllSubscriptionResults()
             vehicles = []
             for vid in ids:
@@ -1561,8 +1543,8 @@ class SumoHighwayEnv(gym.Env):
 
         # ----- (1) 종방향 + 횡방향 행동 적용 -----
         v_before, road_before = None, None
-        tls_before = None            # [12팀] 이번 스텝 직전 앞 신호 (tl, link, 정지선까지 m) — 신호 위반 판정
-        safety_brake = False         # [12팀] 이번 스텝에 안전장치가 속도 명령을 낮췄는가
+        tls_before = None            # 이번 스텝 직전 앞 신호 (tl, link, 정지선까지 m) : 신호 위반 판정
+        safety_brake = False         # 이번 스텝에 안전장치가 속도 명령을 낮췄는가
         if self.ego_id in traci.vehicle.getIDList():
             v = traci.vehicle.getSpeed(self.ego_id)
             v_before, road_before = v, traci.vehicle.getRoadID(self.ego_id)
@@ -1577,15 +1559,14 @@ class SumoHighwayEnv(gym.Env):
                 accel_cmd = (accel_raw * self.max_accel
                              if accel_raw >= 0.0 else accel_raw * self.max_decel)
                 dv = accel_cmd * self.step_length
-                # [12팀 11/15] 속도 명령 상한 = 지금 차로 제한속도 (수업 원본은 vmax 22.2 m/s = AV 경로에 없는 올림픽대로 값).
-                # 제한속도가 낮은 차로에 막 들어섰을 때 순간 감속하지 않게, 상한은 최대 감속으로 내려갈 수 있는 속도 아래로는 안 내린다.
-                cap = max(min(self.vmax, self._lane_limit()), v - self.max_decel * self.step_length)
-                target = float(np.clip(v + dv, 0.0, cap))
+                # 수업 원본처럼 차 최고속도 vmax만 속도 명령 상한으로 쓴다.
+                # 차로 제한속도 준수는 과속 감점으로 학습한다.
+                target = float(np.clip(v + dv, 0.0, self.vmax))
                 if self.safety_brake:
                     v_safe = self._safe_speed()
                     if v_safe is not None:
                         # 안전장치도 한 스텝에 최대 감속(EGO decel)보다 세게는 못 줄인다 (11/16 검토 E: 1,314회 중 1회
-                        # 물리 한계 이상 제동). 그래도 못 서면 충돌로 끝난다 — 안전장치는 물리를 넘지 않는다.
+                        # 물리 한계 이상 제동). 그래도 못 서면 충돌로 끝난다 : 안전장치는 물리를 넘지 않는다.
                         v_safe = max(v_safe, v - self.max_decel * self.step_length, 0.0)
                     if v_safe is not None and target > v_safe:
                         target, safety_brake = v_safe, True
@@ -1601,9 +1582,8 @@ class SumoHighwayEnv(gym.Env):
         # ----- (3) 이벤트/관측 -----
         collided = self.ego_id in traci.simulation.getCollidingVehiclesIDList()
         arrived = self.ego_id in traci.simulation.getArrivedIDList()
-        # 주의: SUMO는 충돌로 제거된 차량도 "도착 목록"에 넣는다. 그래서 도착은
-        #   (충돌 아님) AND (경로의 마지막 도로에서 사라짐) 일 때만 인정한다.
-        #   그 밖의 곳에서 사라지면 "경로 이탈"(off_route)로 따로 기록한다.
+        # SUMO의 도착 목록에는 충돌로 제거된 차도 포함될 수 있다.
+        # 충돌 없이 경로 마지막 도로에서 사라진 경우만 도착으로 인정한다.
         off_route = False
         if arrived and (collided or (self.network and self._ego_road != self._route_last)):
             arrived = False
@@ -1611,10 +1591,8 @@ class SumoHighwayEnv(gym.Env):
         teleported = self.ego_id in traci.simulation.getStartingTeleportIDList()
         self.teleports += traci.simulation.getStartingTeleportNumber()
         alive = self.ego_id in traci.vehicle.getIDList() and not teleported
-        # [12팀 11/15] 신호 위반: 직전 스텝 앞 신호의 정지선을 이번 스텝에 넘었고, 지금 그 방향이 적색이면 위반.
-        # (SUMO는 스텝 시작에 신호를 바꾸고 차를 움직이므로 지금 색 = 넘은 순간의 색. 황색 진입은 위반 아님)
-        # 정지선을 실제로 넘었을 때만 센다 = 접근 도로를 벗어남(교차로 안 · 다음 도로). 차로마다 신호 번호가 달라서
-        # 정지선 앞 차로 변경만으로도 앞 신호가 바뀐다 (11/16 검토: 대기 중 차로 변경이 위반으로 잡혔다).
+        # 접근 도로를 벗어나 정지선을 넘었고, 해당 방향의 현재 신호가 적색이면 위반이다.
+        # 정지선 앞 차로 변경으로 신호 링크만 바뀐 경우는 제외한다.
         red_light = False
         if alive and tls_before is not None and tls_before[2] <= (v_before or 0.0) * self.step_length + 5.0:
             try:
@@ -1630,7 +1608,7 @@ class SumoHighwayEnv(gym.Env):
             _r = traci.vehicle.getRoadID(self.ego_id)
             if not _r.startswith(":"):
                 self._ego_road = _r          # 교차로 내부를 뺀 마지막 도로 (도착 판정용)
-        # [12팀 11/19] 잘못된 차로 조기 종료 (RL 모드만, SIMULATION["wrong_lane_end_m"]): 경로의 다음 엣지로 못 가는 차로에서
+        # 잘못된 차로 조기 종료 (RL 모드만, SIMULATION["wrong_lane_end_m"]): 경로의 다음 엣지로 못 가는 차로에서
         # 차로 끝 wrong_lane_end_m 안에 들면 경로 이탈로 끝낸다 (그전에는 차로 끝에 서서 120 s 뒤 stuck으로 끝났다)
         wrong_lane = False
         if alive and not collided and not self.sumo_driver and self.wrong_lane_end_m > 0.0:
@@ -1671,12 +1649,14 @@ class SumoHighwayEnv(gym.Env):
             same_lane_leader = self._neighbor(0, leader=True)
             if same_lane_leader is not None:
                 ego_gap = same_lane_leader[0]
-            # [12팀 11/15] 속도 보상 = 지금 차로 제한속도 대비 (과속해도 더 받지 않음)
+            # 속도 보상 = 지금 차로 제한속도 대비 (과속해도 더 받지 않음)
             lane_limit = self._lane_limit()
             reward = float(self.rw["speed_weight"]) * min(ego_speed / lane_limit, 1.0)
-            # [12팀 11/15] 근접 감점은 달리는 중(close_gap_min_speed 이상)에만 — 신호 대기열에 2 m 간격으로 서는 것은 정상이다
-            # (수업 원본은 정지 중에도 매 스텝 감점 → 빨간불에 바르게 서도 리턴이 크게 깎였다)
-            # [12팀 11/18] close_gap_headway(초) > 0이면 고정 거리 대신 차간 시간으로 판정: 간격 < close_gap_headway × 내 속도
+            # 과속 감점: 차로 제한속도를 넘은 비율만큼 (10% 과속이면 overspeed_weight 0.5 × 0.1 = 0.05)
+            reward -= float(self.rw.get("overspeed_weight", 0.0)) * max(0.0, ego_speed / lane_limit - 1.0)
+            # 근접 감점은 달리는 중(close_gap_min_speed 이상)에만 : 신호 대기열에 2 m 간격으로 서는 것은 정상이다
+            # 정지 중의 정상적인 신호 대기열 간격은 감점하지 않는다.
+            # close_gap_headway(초) > 0이면 고정 거리 대신 차간 시간으로 판정: 간격 < close_gap_headway × 내 속도
             # (6 m 고정 기준은 15 m/s에서 0.4초라 고속 근접을 못 잡고, 저속에서는 너무 엄했다). 0이면 위 거리 기준 그대로.
             hw = float(self.rw.get("close_gap_headway", 0.0))
             close_lim = hw * ego_speed if hw > 0.0 else float(self.rw["close_gap_threshold"])
@@ -1684,11 +1664,8 @@ class SumoHighwayEnv(gym.Env):
                     ego_gap < close_lim
                     and ego_speed >= float(self.rw.get("close_gap_min_speed", 0.0))):
                 reward -= float(self.rw["close_gap_penalty"])
-            # [12팀 11/18] 접근 감점: 같은 차로 앞차에 빠르게 다가가는 중(충돌까지 남은 시간 TTC = 간격 / 접근 속도가
-            # ttc_threshold 초 미만)이면 속도와 상관없이 감점. RL 1차 충돌은 거의 전부 신호 대기 줄 · 정체 꼬리에서 저속으로
-            # 앞차에 다가가다 닿은 것이었다 — 위 근접 감점은 5 m/s 미만에서 꺼져 있어 이 구간에 신호가 없었다.
-            # [12팀 11/18 보상 3차] 감점 크기를 TTC에 비례: ttc_penalty × clip(ttc_threshold / TTC, 1, ttc_max_scale).
-            # ttc_max_scale = 1이면 이전처럼 고정 감점.
+            # 같은 차로 앞차에 접근할 때 TTC가 기준보다 작으면 속도와 무관하게 감점한다.
+            # TTC 비율로 배율을 정하고 ttc_max_scale에서 제한한다.
             tp = float(self.rw.get("ttc_penalty", 0.0))
             if tp > 0.0 and same_lane_leader is not None:
                 closing = ego_speed - float(same_lane_leader[1])
@@ -1696,7 +1673,7 @@ class SumoHighwayEnv(gym.Env):
                 if closing > 0.1 and ego_gap / closing < ttc_thr:
                     scale = min(max(ttc_thr / max(ego_gap / closing, 1e-6), 1.0), float(self.rw.get("ttc_max_scale", 1.0)))
                     reward -= tp * scale
-            # [12팀 11/18 보상 3차] 적색 신호 앞 먼 정지 감점 (조건은 _far_stop_at_red). 0이면 끔.
+            # 적색 신호 앞 먼 정지 감점 (조건은 _far_stop_at_red). 0이면 끔.
             fp = float(self.rw.get("red_far_stop_penalty", 0.0))
             if fp > 0.0 and self._far_stop_at_red(ego_speed, ego_gap):
                 far_stop = True
@@ -1711,7 +1688,7 @@ class SumoHighwayEnv(gym.Env):
                     and ego_gap < float(self.rw.get("blocked_gap", 20.0))
                     and ego_speed < float(self.rw.get("blocked_speed_frac", 0.7))
                         * lane_limit
-                    and not self._waiting_at_red()):     # [12팀 11/15] 신호 대기열은 추월로 벗어날 막힘이 아님
+                    and not self._waiting_at_red()):     # 신호 대기열은 추월로 벗어날 막힘이 아님
                 reward -= bp
 
             # ---- 차선변경 보상 항 ----
@@ -1721,19 +1698,19 @@ class SumoHighwayEnv(gym.Env):
             # changeLane을 호출해 True를 반환한다(차선 고정 용도).
             # 따라서 "실제 변경"은 lane_change != 0 과 함께 판정해야 한다.
             if lane_change != 0 and lane_change_applied:
-                # 실행된 변경마다 소액 감점 → 이득 없는 지그재그 억제.
+                # 차로 변경 감점으로 이득 없는 지그재그 주행을 억제한다.
                 # 변경 덕에 속도 보상이 그 이상 늘면 순이득이므로,
                 # "필요할 때만 바꾸는" 정책으로 수렴하게 만드는 항이다.
                 reward -= float(self.rw.get("lane_change_penalty", 0.0))
             elif lane_change != 0:
                 # 명령은 냈는데 실행 불가(차선 없음/교차로)였던 경우 감점
-                # → 의미 없는 행동 출력을 줄이는 정칙화 (rl_action_penalty 대응)
+                # 실행할 수 없는 차로 변경 명령을 줄이는 정칙화 항이다.
                 reward -= float(self.rw.get("invalid_action_penalty", 0.0))
 
         # ---- 순간이동·비정상 정지: 시뮬레이션 이상으로 보고 에피소드 종료 ----
         #   순간이동(teleport): SUMO가 오래 막힌 차를 앞으로 옮겨 버리는 것. ego에 생기면 종료.
         #   비정상 정지: stuck_seconds 이상 계속 멈춤 (경로 차선을 놓쳐 차선 끝에 선 경우 등).
-        #   빨간불(·황색) 신호 대기는 정상 정지라 세지 않는다 (앞 신호까지 RED_WAIT_RANGE m 안 — 대기열 포함).
+        #   빨간불(·황색) 신호 대기는 정상 정지라 세지 않는다 (앞 신호까지 RED_WAIT_RANGE m 안 : 대기열 포함).
         stuck = False
         if alive and not terminated and not off_route:
             if ego_speed >= 0.1:
@@ -1747,7 +1724,7 @@ class SumoHighwayEnv(gym.Env):
         if teleported or off_route:
             terminated = True
         if off_route:
-            # [12팀 11/19] 경로 이탈 감점 (기본 0 — training/train.py REWARD_OVERRIDES). 사라짐 · 잘못된 차로 조기 종료 모두
+            # 경로에서 사라지거나 잘못된 차로 조기 종료로 끝나면 경로 이탈 감점을 적용한다.
             reward -= float(self.rw.get("off_route_penalty", 0.0))
         if red_light and not collided:
             terminated = True
@@ -1770,10 +1747,10 @@ class SumoHighwayEnv(gym.Env):
             "teleported": teleported,
             "stuck": stuck,
             "off_route": off_route,
-            "wrong_lane": wrong_lane,                           # [12팀 11/19] off_route 중 잘못된 차로 조기 종료
+            "wrong_lane": wrong_lane,                           # off_route 중 잘못된 차로 조기 종료
             "teleports": self.teleports,
             "red_light": red_light,
-            "red_far_stop": far_stop,                           # [12팀 11/18] 이번 스텝 적색 신호 앞 먼 정지 감점
+            "red_far_stop": far_stop,                           # 이번 스텝 적색 신호 앞 먼 정지 감점
             "safety_brake": safety_brake,                       # 이번 스텝 안전장치 개입
             "safety_interventions": self.safety_interventions,  # 에피소드 누적
             "collided": collided,
