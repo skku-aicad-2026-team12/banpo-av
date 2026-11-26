@@ -1,6 +1,6 @@
 # 실측 자료
 
-도로망의 교통 수요 · 신호 · 버스를 정할 때 쓴 실측 자료다. 값을 어떻게 정했는지는 [`docs/프로젝트_기록.md`](../../../docs/프로젝트_기록.md) §5, 설정 위치는 수요 · 버스 `environment/env/road_config.py`, 신호 `environment/road/road_spec.py` (`SIGNALS`).
+도로망의 교통 수요 · 신호 · 버스를 정할 때 쓴 실측 자료다. 요약은 [프로젝트 페이지](https://skku-aicad-2026-team12.github.io/banpo-av/#traffic) 03 교통 절에 있고, 설정 위치는 수요 · 버스 `environment/env/road_config.py`, 신호 `environment/road/road_spec.py` (`SIGNALS`).
 
 | 파일 | 내용 | 출처 |
 |---|---|---|

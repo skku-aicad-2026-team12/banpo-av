@@ -120,7 +120,7 @@ def make_policy(args, env, worker_seed: int):
     if args.policy == "rule":
         # 관측만 보고 운전하는 규칙 정책 (environment/road/check_env.py rule_policy) : BC 시범 · DAgger 정답.
         # 5조합 × 30회 안전장치 끔: 도착 99.3% · 충돌 0.7% · 신호 위반 0, 앞차 최소 간격 약 12 m
-        # (SUMO 운전자는 앞차 뒤 2.5 m = 충돌 판정 경계에 서서 BC 시범으로 부적합 : docs/프로젝트_기록.md §12.6).
+        # (SUMO 운전자는 앞차 뒤 2.5 m = 충돌 판정 경계에 서서 BC 시범으로 부적합).
         return _rule_policy(env)
 
     if args.policy == "sumo":

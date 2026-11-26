@@ -19,7 +19,7 @@ EVALUATION = os.path.join(ROOT, "evaluation")
 DATA_COLLECTION = os.path.join(ROOT, "data_collection")
 DATA = os.path.join(ROOT, "data")
 RESULTS = os.path.join(ROOT, "results")
-EVIDENCE = os.path.join(ROOT, "docs", "02.근거")
+EVIDENCE = os.path.join(ROOT, "environment", "road", "measured")
 
 for _d in (DATA_COLLECTION, EVALUATION, TRAINING, ROAD_DIR, ENVIRONMENT, ROOT):
     if _d not in sys.path:

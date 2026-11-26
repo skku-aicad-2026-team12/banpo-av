@@ -1,7 +1,7 @@
 """12팀 학습 스크립트 : BC로 PPO 정책을 초기화하고, 여러 SUMO 워커로 PPO를 병렬 학습한다.
 
 수업 원본 PPO(training/algorithms/ppo.py)는 고치지 않는다. 보상 · 하이퍼파라미터(training/train.py의 REWARD_OVERRIDES · HPARAMS)는
-바꿀 수 있지만 두 학습 갈래가 같은 값을 써야 하므로 PR로만 바꾼다 (docs/00.필독/공통_설명.md §4).
+바꿀 수 있지만 두 학습 갈래가 같은 값을 써야 하므로 함께 바꾼다.
 PPO 클래스 · 하이퍼파라미터(train.HPARAMS) · 보상(train.REWARD) · 환경 설정은 수업 코드를 그대로 가져다 쓴다.
 
 사용 (프로젝트 루트에서):

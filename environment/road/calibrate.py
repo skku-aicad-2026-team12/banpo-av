@@ -5,7 +5,7 @@
 
 먼저 environment/road/build/before/banpo.net.xml이 있어야 한다 (python -X utf8 environment/road/build_net.py).
 
-1. 실측 목표: docs/02.근거/교통_신호_버스/topis_2026_09_반포권역_시간대평균.csv 에서 평일 11~15시 평균 (대/시).
+1. 실측 목표: environment/road/measured/topis_2026_09_반포권역_시간대평균.csv 에서 평일 11~15시 평균 (대/시).
    신반포로(D-36 사평대로 대용)는 참고로만 출력 (측정 지점이 없어 비교하지 않음 : 진입량은 4절)
 2. 수요 검사: environment/env/road_config.py TRAFFIC["od"]를 차로 단위 경로로 배정해, 측정 지점 8곳(반포대교 북행 · 남행,
    잠수교 북행 · 남행, 반포대로 북행 · 남행, 올림픽대로 양방향)에 흐르는 교통량을 실측과 비교 (보행화 전: TOPIS,
@@ -23,7 +23,7 @@ import road_spec as S
 import routing
 from env.road_config import TRAFFIC
 
-TOPIS = os.path.join(ROOT, "docs", "02.근거", "교통_신호_버스", "topis_2026_09_반포권역_시간대평균.csv")
+TOPIS = os.path.join(ROOT, "environment", "road", "measured", "topis_2026_09_반포권역_시간대평균.csv")
 HOURS = range(11, 16)                  # 평일 낮 (11~15시)
 
 # 측정 지점  /  도로망에서 같은 교통량이 지나는 엣지
@@ -86,7 +86,7 @@ def main():
         say(f"   {e:8s} {v:7.0f}  {name}")
 
     say("\n2. 수요 배정 결과 vs 실측 (잠수교 폐쇄 전 = 9월 실측, 후 = 11/9~11 실측)")
-    # 보행화 후 목표: 서울 t-data "1시간 지점별 교통량(차로별)" 11/9~11 평일 11~15시 평균 (docs/02.근거/교통_신호_버스/tdata_10081_*.csv, 11/12)
+    # 보행화 후 목표: 서울 t-data "1시간 지점별 교통량(차로별)" 11/9~11 평일 11~15시 평균 (environment/road/measured/tdata_10081_*.csv, 11/12)
     after_target = {"bridge": 2858, "sb_up": 2384, "jam_n": 0.0, "jam_s": 0.0, "bp_nb": 2233, "bp_sb": 1974, "wb_a": 7190, "eb_a": 5219}
     for scn in ("before", "after"):
         flow, _ = assign(net, lane_attr, scn)
