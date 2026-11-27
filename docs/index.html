@@ -181,10 +181,10 @@ h3[id] { scroll-margin-top: 64px; }
       <table>
         <thead><tr><th>모듈</th><th>위치</th><th>생기는 상호작용</th></tr></thead>
         <tbody>
-          <tr><td>분기</td><td>고가와 측도 분기 (반포대로 6차로가 고가 2 + 측도 4)</td><td>목적지에 맞는 길과 차로를 580 m 앞에서 선택</td></tr>
+          <tr><td>분기</td><td>고가와 측도 분기 (반포대로 6차로가 고가 2, 측도 4로 나뉨)</td><td>목적지에 맞는 길과 차로를 580 m 앞에서 선택</td></tr>
           <tr><td>신호 사거리</td><td>신반포사거리 (강남터미널고가 밑, 중앙 버스전용차로)</td><td>신호 정지와 진행, 직진과 좌회전, 버스, 보행자</td></tr>
-          <tr><td>합류와 차로 감소</td><td>고가 2차로와 측도 2차로가 4차로로 합쳐진 뒤 3차로로 축소</td><td>합류 타이밍, 차로 끝 앞 양보</td></tr>
-          <tr><td>왼쪽과 오른쪽 분기</td><td>① 잠수교 지하차도, ② 올림픽대로 하남 방향</td><td>반대 방향 차로 변경의 엇갈림, 분기를 놓치면 경로 이탈</td></tr>
+          <tr><td>합류와 차로 감소</td><td>고가 2차로와 측도 2차로가 4차로로 합쳐진 뒤 3차로로 줄어듦</td><td>합류 타이밍, 차로 끝 앞 양보</td></tr>
+          <tr><td>왼쪽과 오른쪽 분기</td><td>① 잠수교 지하차도, ② 올림픽대로 하남 방향</td><td>반대 방향 차로 변경이 엇갈림, 분기를 놓치면 경로 이탈</td></tr>
           <tr><td>램프 합류</td><td>③ 올림픽대로 김포 방향에서 반포대교 상층으로</td><td>램프 차량과 본선 차량 (통제 뒤 수요가 몰리는 곳)</td></tr>
           <tr><td>회전교차로</td><td>잠수교 남단 (반시계 1차로, 4방향)과 우회로 3개</td><td>회전 중인 차에 양보한 뒤 진입</td></tr>
           <tr><td>엮임 (weaving)</td><td>올림픽대로 김포 방향 260 m (루프 합류 뒤 주차장 진출)</td><td>엇갈리는 차로 변경</td></tr>
@@ -240,7 +240,7 @@ h3[id] { scroll-margin-top: 64px; }
         <tbody>
           <tr><td><code>goga-jamsu</code></td><td><span class="tag before">통제 전</span></td><td class="num">3</td><td>고가 → 지하차도 → 회전교차로 → 잠수교</td><td>지하차도 분기 차로 선택, 회전교차로 진입 양보</td></tr>
           <tr><td><code>oly-jamsu</code></td><td><span class="tag before">통제 전</span></td><td class="num">1</td><td>올림픽대로 → 램프 → 회전교차로 → 잠수교</td><td>램프 엮임 구간 차로 변경, 회전교차로 진입 양보</td></tr>
-          <tr><td><code>side-banpo</code></td><td><span class="tag after">통제 후</span></td><td class="num">3</td><td>측도 → 신반포사거리 → 반포대교</td><td>신호 교차로 통과, 직진 차로 골라 들어가기, 합류 양보</td></tr>
+          <tr><td><code>side-banpo</code></td><td><span class="tag after">통제 후</span></td><td class="num">3</td><td>측도 → 신반포사거리 → 반포대교</td><td>신호 교차로 통과, 좌회전 전용 차로 피해 차로 선택, 합류 양보</td></tr>
           <tr><td><code>goga-banpo</code></td><td><span class="tag after">통제 후</span></td><td class="num">3</td><td>고가 → 합류 → 반포대교</td><td>합류 + 차로 감소 구간 끼어들기, 양보</td></tr>
           <tr><td><code>sbr-banpo</code></td><td><span class="tag after">통제 후</span></td><td class="num">2</td><td>신반포로 → 우회전 → 반포대교</td><td>짧은 거리 안 오른쪽 차로 변경, 우회전</td></tr>
         </tbody>
@@ -277,7 +277,7 @@ h3[id] { scroll-margin-top: 64px; }
         <tbody>
           <tr><td>속도</td><td>제한속도까지 빠를수록 (속도 / 제한속도, 최대 1)</td><td class="num">+0.1</td></tr>
           <tr><td>과속</td><td>제한속도를 넘은 비율만큼 (10% 넘으면 −0.05)</td><td class="num">−0.5</td></tr>
-          <tr><td>근접</td><td>5 m/s 이상에서 앞차와 6 m 안으로 근접</td><td class="num">−0.1</td></tr>
+          <tr><td>근접</td><td>5 m/s 이상으로 앞차 6 m 안에 붙음</td><td class="num">−0.1</td></tr>
           <tr><td>접근</td><td>같은 차로 앞차와 충돌까지 2초 미만</td><td class="num">−0.2</td></tr>
           <tr><td>도착</td><td>목적지 도착</td><td class="num">+2</td></tr>
           <tr><td>실패</td><td>충돌, 신호 위반, 120 s 정지, 경로 이탈</td><td class="num">−20</td></tr>
@@ -459,9 +459,9 @@ h3[id] { scroll-margin-top: 64px; }
         <thead><tr><th>칼럼</th><th>단위 · 형식</th><th>의미</th><th>필요한 이유</th></tr></thead>
         <tbody>
           <tr><td><code>sim_time</code></td><td>s</td><td>관측 시점의 시뮬레이션 시각</td><td>신호 5곳이 고정 주기라 이 값으로 모든 신호 상태를 복원</td></tr>
-          <tr><td><code>ego_route</code></td><td>정수 0–4</td><td>AV 경로 (5개 중 하나)</td><td>같은 도로에서 출발하는 경로들을 분기 전부터 목적지별로 구분</td></tr>
+          <tr><td><code>ego_route</code></td><td>정수 0–4</td><td>AV 경로 (5개 중 하나)</td><td>같은 도로에서 출발하는 경로가 있어 분기 전엔 목적지를 알 수 없음</td></tr>
           <tr><td><code>end_reason</code></td><td>정수 0–8 (판 마지막 행)</td><td>판이 끝난 이유</td><td>정지, 경로 이탈, 순간이동, 신호 위반 구분</td></tr>
-          <tr><td><code>signal_tls</code></td><td>정수 (없음 −1)</td><td>AV가 다음에 만날 신호</td><td>신호 상태 기록 (수업 요구: 신호를 쓰면 State에 신호 상태 추가)</td></tr>
+          <tr><td><code>signal_tls</code></td><td>정수 (없음 −1)</td><td>AV가 다음에 만날 신호</td><td>state와 observation에 신호가 없음</td></tr>
           <tr><td><code>signal_state</code></td><td>녹 1 · 황 0.5 · 적 0 · 없음 −1</td><td>그 신호의 지금 색</td><td>위와 같은 요구</td></tr>
           <tr><td><code>signal_remaining_s</code></td><td>s (없으면 빈 값)</td><td>그 색이 바뀔 때까지 남은 시간</td><td>실제 초 단위 값</td></tr>
         </tbody>
@@ -477,7 +477,7 @@ h3[id] { scroll-margin-top: 64px; }
     </div>
     <ul>
       <li><b>수집 조건.</b> 최종 모델 단독 주행, 안전장치 끔, 무작위 출발 차로, 5경로 무작위, 실측 수요 100%</li>
-      <li><b>시드.</b> 판마다 SUMO 시드 직접 지정 → 26,000판 전부 서로 다른 교통 (중복 0 검증)</li>
+      <li><b>시드.</b> 판마다 SUMO 시드 직접 지정 → 26,000판 전부 다른 교통 (중복 0 검증)</li>
       <li><b>저장 구조.</b> 묶음마다 JSONL.gz (수업 형식, <code>next_*</code>는 판 마지막 행만) + NPZ (학습용 배열)</li>
     </ul>
     <p class="more">정확한 값: 10,844,678행, 136.6 GB(JSONL.gz 26개 135.5 GB, NPZ 26개 1.1 GB). 도착 25,375판, 충돌 190판(0.73%), 신호 위반 300판, 시간초과 115판, 정지 20판. 관측 결측(NaN) 0, 건너뛴 판 0, 중복 궤적 0. 한 행 = 한 스텝(0.5초).</p>
@@ -507,10 +507,10 @@ h3[id] { scroll-margin-top: 64px; }
         <thead><tr><th>문제</th><th>원인</th><th>해결</th><th>결과</th></tr></thead>
         <tbody>
           <tr><td><b>몇 시간 뒤 회전교차로 교착</b></td><td>램프 차량이 회전 차량에 끝없이 양보 → 대기열이 고리를 막아 순간이동 발생</td><td>배경차 impatience 0.5 (기다릴수록 과감히 진입)</td><td><span class="nw">4시간 교착 0,</span> 잠수교 북행 <span class="nw">−34% → −2.5%</span></td></tr>
-          <tr><td><b>차로만 유지하는 AV가 14초 만에 "도착"</b></td><td>SUMO는 충돌로 사라진 차도 도착 목록에 포함</td><td>도착 = 충돌 없이 경로 끝에서 빠져나간 경우로 한정, 실패는 원인별로 따로 판정 (<code>end_reason</code>)</td><td>신뢰할 수 있는 도착 · 충돌 수치</td></tr>
-          <tr><td><b>수집이 초당 1~2 스텝, 10⁷개에 수 일</b></td><td>수업 코드는 매 스텝 차량 약 450대의 값을 한 대씩 SUMO에 조회 (스텝당 약 3,000번 통신) — 시간의 89%</td><td>구독: 처음 한 번 등록 후 매 스텝 전체 값을 한 번에 수신. libsumo: SUMO를 파이썬 안에서 직접 불러 통신 단계 제거</td><td><span class="nw">212 s → 11 s</span> <span class="nw">(약 19배),</span> 데이터 바이트 단위 동일</td></tr>
-          <tr><td><b>BC가 신호 대기 줄에서 계속 추돌</b></td><td>시범 운전자(SUMO)가 앞차 뒤 정확히 2.50 m(충돌 판정 경계)에 정지, 관측 밖 정보(SUMO 내부값)로 운전</td><td>관측만 보는 규칙 운전자(IDM)로 선생님 교체</td><td>BC 도착 <span class="nw">26% → 96%</span></td></tr>
-          <tr><td><b>PPO를 돌릴수록 도착률 하락</b></td><td>작은 실패 벌점(5) 때문에 도착 88.7% 모델의 리턴 &gt; 96% 모델의 리턴</td><td>실패 벌점 5 → 20</td><td>리턴 순위 = 평가 순위</td></tr>
+          <tr><td><b>차로만 유지하는 AV가 14초 만에 "도착"</b></td><td>SUMO는 충돌로 사라진 차도 도착 목록에 넣음</td><td>도착 = 충돌 없이 경로 끝에서 사라짐, 실패는 원인별로 따로 판정 (<code>end_reason</code>)</td><td>도착 · 충돌 수치를 믿을 수 있게</td></tr>
+          <tr><td><b>수집이 초당 1~2 스텝, 10⁷개에 수 일</b></td><td>수업 코드는 매 스텝 차량 약 450대의 값을 한 대씩 SUMO에 물어봄 (스텝당 약 3,000번 통신) — 시간의 89%</td><td>구독: 처음 한 번 등록하면 매 스텝 전체 값을 한 번에 받음. libsumo: SUMO를 파이썬 안에서 직접 불러 통신 자체를 없앰</td><td><span class="nw">212 s → 11 s</span> <span class="nw">(약 19배),</span> 데이터 바이트 단위 동일</td></tr>
+          <tr><td><b>BC가 신호 대기 줄에서 계속 추돌</b></td><td>시범 운전자(SUMO)가 앞차 뒤 정확히 2.50 m(충돌 판정 경계)에 서고, 관측에 없는 정보로 운전</td><td>관측만 보는 규칙 운전자(IDM)를 선생님으로 교체</td><td>BC 도착 <span class="nw">26% → 96%</span></td></tr>
+          <tr><td><b>PPO를 돌릴수록 도착률 하락</b></td><td>실패 벌점(5)이 작아 도착 88.7% 모델의 리턴이 96% 모델보다 큼</td><td>실패 벌점 5 → 20</td><td>리턴 순위 = 평가 순위</td></tr>
         </tbody>
       </table>
     </div>
