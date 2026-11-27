@@ -56,7 +56,7 @@
 최종 모델은 세 번에 걸쳐 이어서 학습한 것이다.
 
 1. **U5.** BC 모델에서 선생님 보정 PPO로 26.2만 스텝을 학습했다. 이때는 환경이 속도 명령을 차로 제한속도로 잘라 주었다.
-2. **VA.** 그 상한을 없애고 과속 감점을 넣은 환경에서 U5를 같은 설정으로 36.8만 스텝 이어서 학습했다.
+2. **VA.** 그 상한을 없애고 과속 감점을 넣은 환경에서 U5를 같은 설정으로 36.8만 스텝 이어서 학습했다. 선별에서 가장 좋은 저장 시점은 16.4만이다(발표자료 모델 변천 표의 `rl_1124_VA · 16.4만`).
 3. **VA2.** VA의 마지막 모델을 같은 설정으로 다시 이어서 학습했다. 26.2만 스텝에 저장한 모델이 최종 모델이다.
 
 학습 설정은 [`results/team_rl_1125_VA2/args.json`](results/team_rl_1125_VA2/args.json)에 있다. 상한을 빼기 전의 U5는 같은 규모의 평가(1,000판)에서 도착 98.8%, 충돌 0.8%였다.
@@ -111,7 +111,7 @@ python -X utf8 evaluation/baseline.py --model results/team_rl_1125_VA2/model_261
 python -X utf8 data_collection/collect_pomdp_data.py --model results/team_rl_1125_VA2/model_261632.pt --safety off --depart-lane random --depart-speed limit --paired-seeds --episodes 1000 --workers 7 --seed 100000 --out-dir data/final_v2 --name final_100000_safetyoff_v2
 
 # 4. 주행 영상 (ffmpeg 필요). 결과는 environment/road/videos/
-python -X utf8 environment/road/record_video.py --model results/team_rl_1125_VA2/model_261632.pt --route oly-jamsu --episode 32 --depart-lane 2 --depart-speed limit --name oly-jamsu_ep32
+python -X utf8 environment/road/record_video.py --model results/team_rl_1125_VA2/model_261632.pt --route oly-jamsu --episode 39 --depart-lane 2 --depart-speed limit --name oly-jamsu_ep39
 
 # 기준 지표: SUMO 기본 운전자, 경로 3개, 경로 차로 출발 (evaluation/baseline_metrics.csv 와 baseline_report.md를 덮어씀)
 python -X utf8 evaluation/baseline.py --episodes 30 --workers 7

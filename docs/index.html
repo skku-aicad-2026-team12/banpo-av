@@ -97,6 +97,20 @@ ol.steps li { margin-bottom: 8px; }
 .tag.before { background: var(--accent-soft); color: var(--accent); }
 .tag.after { background: var(--chip); color: var(--green); }
 footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+.team { list-style: none; padding: 0; margin: 0 0 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2px 24px; font-size: 14px; color: var(--muted); }
+.team b { color: var(--text); margin-right: 6px; }
+.grid.stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 14px; }
+.grid.stats .stat-label:first-child { margin-bottom: 2px; }
+.more { color: var(--muted); font-size: 15px; margin: 6px 0 14px; }
+ol.steps .more { margin: 4px 0 4px; }
+tr.hl td { background: var(--accent-soft); }
+details { margin: 8px 0 16px; }
+details summary { cursor: pointer; font-weight: 600; color: var(--accent); margin-bottom: 10px; }
+table.problems td:first-child { min-width: 150px; }
+nav.toc .toc-sep { flex: none; width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
+nav.toc a.appx { color: var(--muted); }
+h3[id] { scroll-margin-top: 64px; }
+@media (max-width: 720px) { .table-wrap table { min-width: 620px; } .table-wrap table.problems { min-width: 760px; } .table-wrap { -webkit-overflow-scrolling: touch; } }
 .theme-toggle { position: fixed; right: 16px; bottom: 16px; z-index: 10; border: 1px solid var(--line); background: var(--bg-soft); color: var(--text); border-radius: 999px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
 </style>
 </head>
@@ -104,8 +118,14 @@ footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
 
 <header class="hero">
   <div class="wrap">
-    <p class="course">성균관대 2026-2 자율주행인공지능및제어 12조 테슬라팀 (김재령, 배준서, 윤동건, 정상현)</p>
-    <h1>잠수교 보행화 전·후,<br>반포대교 남단 입체 접속부를 지나는 자율주행차</h1>
+    <p class="course">성균관대 2026-2 자율주행인공지능및제어 12조 테슬라팀</p>
+    <ul class="team">
+      <li><b>김재령</b> 학습 실험, 프로젝트 페이지, GitHub</li>
+      <li><b>배준서</b> 도로 · 교통 구축, 관측 · 보상 · 학습 설계, 발표자료</li>
+      <li><b>윤동건</b> 데이터 수집 · Hugging Face, 발표</li>
+      <li><b>정상현</b> 학습 실험, 데이터 수집 · 업로드 · 검증, 발표</li>
+    </ul>
+    <h1>잠수교 보행화 전·후,<br>반포대교 남단을 지나는 자율주행차</h1>
     <div class="buttons">
       <a class="btn" href="https://github.com/skku-aicad-2026-team12/banpo-av">Code</a>
       <a class="btn" href="https://huggingface.co/datasets/skku-aicad-2026-team12/banpo-av-dataset-v2">Dataset (Hugging Face)</a>
@@ -121,42 +141,42 @@ footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
 <nav class="toc" aria-label="목차">
   <div class="wrap">
     <span class="toc-label">목차</span>
-    <a href="#why"><span class="n">01</span>선택 이유</a><a href="#road"><span class="n">02</span>도로 구조</a><a href="#traffic"><span class="n">03</span>교통</a><a href="#av"><span class="n">04</span>AV 학습</a><a href="#results"><span class="n">05</span>결과</a>
-    <a href="#videos"><span class="n">06</span>영상</a><a href="#dataset"><span class="n">07</span>데이터</a><a href="#usage"><span class="n">08</span>실행법</a><a href="#limits"><span class="n">09</span>한계</a><a href="#slides"><span class="n">10</span>발표자료</a>
+    <a href="#road"><span class="n">01</span>도로</a><a href="#traffic"><span class="n">02</span>교통과 시나리오</a><a href="#av"><span class="n">03</span>AV 학습</a><a href="#results"><span class="n">04</span>주행 결과</a><a href="#dataset"><span class="n">05</span>수집 데이터</a><a href="#problems"><span class="n">06</span>문제와 해결</a>
+    <span class="toc-sep"></span><a class="appx" href="#usage">실행법</a><a class="appx" href="#limits">한계</a><a class="appx" href="#slides">발표자료</a>
   </div>
 </nav>
 
 <main>
 
-<!-- 1. 이 도로를 선택한 이유 -->
-<section id="why">
+<!-- 01 도로 -->
+<section id="road">
   <div class="wrap">
-    <h2><span class="num">01</span>이 도로를 선택한 이유</h2>
-    <p class="sub">실제 정책으로 도로는 그대로인 채 교통 수요만 바뀌어, 같은 자율주행차를 두 교통 상황에서 비교할 수 있다.</p>
+    <h2><span class="num">01</span>도로</h2>
+    <p class="sub">반포대교 남단에서 신반포사거리까지, 고가와 지상, 지하가 겹치는 구간을 SUMO로 옮겼다.</p>
     <div class="overview">
       <figure>
         <img src="assets/road_overview.png" alt="반포대교 남단 전체 도로망. 북쪽 한강의 잠수교와 반포대교부터 남쪽 반포대로까지" loading="lazy">
-        <figcaption>전체 도로망 (sumo-gui, 위가 북쪽). 갈색은 고가, 검정은 지상, 연두는 경사로, 진초록은 둔치 도로다. 구간과 램프 길이, 차로 수는 실제 값이고 모양만 직선과 원호로 단순화했다.</figcaption>
+        <figcaption>전체 도로망 (sumo-gui, 위가 북쪽). 갈색은 고가, 검정은 지상, 연두는 경사로, 진초록은 둔치 도로다. 가운데 남북 길이 반포대로, 신반포사거리 위 갈색 길이 강남터미널고가, 그 양옆 검은 길이 측도다. 한강에서 오른쪽 갈색 다리가 반포대교, 왼쪽 초록 다리가 잠수교다.</figcaption>
       </figure>
       <div>
-        <h3>실제 정책 변화가 만든 실험</h3>
-        <p>2026년 10월 26일부터 잠수교 다리 위 차량 통행이 막혔다. 지하차도와 회전교차로, 루프, 주차장은 그대로 다닌다. 통제 뒤 반포대교 북행 교통량은 시간당 2,736대에서 2,858대로 4% 늘었다. 잠수교 북행으로 가던 563대 중 약 22%만 반포대교로 옮겨 온 양이다. 도로는 거의 그대로이고 바뀐 것은 교통 수요다.</p>
-        <h3>3층 입체 구조의 도로</h3>
-        <p>그림 가운데를 남북으로 지나는 길이 반포대로다. 신반포사거리 위를 지나는 갈색 길이 고가(강남터미널고가)이고, 그 양옆 검은 길이 측도다. 북쪽 한강에서 오른쪽 갈색 다리가 반포대교, 왼쪽 초록 다리가 잠수교다.</p>
-        <p>고가와 지상, 지하가 겹쳐 있다. 반포대교 직전 약 300 m 안에서 합류, 왼쪽 분기, 차로 감소, 오른쪽 분기, 다시 합류가 이어진다.</p>
-        <h3>이 도로에서 AV가 풀어야 하는 것</h3>
-        <p>잠수교로 가는 지하차도 입구는 고가와 측도가 합쳐진 직후, 왼쪽 끝 차로에만 있다. 그래서 잠수교로 가는 차는 580 m 앞 고가와 측도가 갈리는 곳에서 고가로 들어가 왼쪽 차로까지 옮겨야 한다. 반포대교로 가는 차는 고가와 측도가 합쳐지는 곳과 ③ 램프 합류에서 옆 차로 차와 순서를 맞춰야 하고, 올림픽대로에서 오는 차는 엮임 구간과 회전교차로에서 다른 차에 양보해야 한다.</p>
+        <h3>도로 선정 이유</h3>
+        <ol class="steps">
+          <li><strong>다양한 도로 구조의 결합.</strong> 사거리, 회전교차로, 합류, 분기, 다중 차선, 차로 감소, 복합 교차로가 한 구간에 모여 있다.
+            <p class="more">고가와 지상, 지하가 겹친 3층 입체 구조다. 반포대교 직전 약 300 m 안에서 합류, 왼쪽 분기, 차로 감소, 오른쪽 분기, 다시 합류가 이어진다. 잠수교로 가는 지하차도 입구는 고가와 측도가 합쳐진 직후 왼쪽 끝 차로에만 있어서, 잠수교로 가는 차는 580 m 앞 고가와 측도가 갈리는 곳에서 고가로 들어가 왼쪽 차로까지 옮겨야 한다.</p></li>
+          <li><strong>높은 교통 수요.</strong> 올림픽대로 김포 방향 <span class="nw">7,190대/시</span>, 반포대로 북행 <span class="nw">2,233대/시</span> (통제 후 평일 낮 실측).</li>
+          <li><strong>잠수교 차량 통제 (2026-10-26).</strong>
+            <p class="more">잠수교 다리 위 차량 통행만 막혔고 지하차도와 회전교차로, 루프, 주차장은 그대로 다닌다. 통제 뒤 반포대교 북행 교통량은 시간당 2,736대에서 2,858대로 4% 늘었다. 잠수교 북행으로 가던 563대 중 약 22%만 반포대교로 옮겨 온 양이다. 도로는 거의 그대로이고 교통 수요만 바뀌어, 같은 자율주행차를 두 교통 상황에서 비교할 수 있다.</p></li>
+        </ol>
+        <h3>도로 구현</h3>
+        <ol class="steps">
+          <li>모양만 직선과 곡선으로 단순하게</li>
+          <li>길이는 실제대로 (구간과 램프 길이는 OpenStreetMap과 로드뷰로 확인)</li>
+          <li>차로 수와 연결은 현실 그대로</li>
+          <li>입체는 평면으로, 높이는 색으로</li>
+        </ol>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- 2. 도로 구조 -->
-<section id="road">
-  <div class="wrap">
-    <h2><span class="num">02</span>도로 구조</h2>
-    <p class="sub">수업에서 요구한 구조 모듈이 거의 다 들어 있다.</p>
-    <p class="note"><b>도로 모양은 단순화했다.</b> 구간 길이와 램프 길이, 차로 수는 OpenStreetMap과 로드뷰로 확인한 실제 값이고, 곡선만 직선과 원호로 바꿨다.</p>
+    <h3>구조 모듈과 장소</h3>
     <div class="table-wrap">
       <table>
         <thead><tr><th>모듈</th><th>위치</th><th>생기는 상호작용</th></tr></thead>
@@ -165,7 +185,7 @@ footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
           <tr><td>신호 사거리</td><td>신반포사거리 (강남터미널고가 밑, 중앙 버스전용차로)</td><td>신호 정지와 진행, 직진과 좌회전, 버스, 보행자</td></tr>
           <tr><td>합류와 차로 감소</td><td>고가 2차로와 측도 2차로가 4차로로 합쳐진 뒤 3차로로 줄어듦</td><td>합류 타이밍, 차로 끝 앞 양보</td></tr>
           <tr><td>왼쪽과 오른쪽 분기</td><td>① 잠수교 지하차도, ② 올림픽대로 하남 방향</td><td>반대 방향 차로 변경이 엇갈림, 분기를 놓치면 경로 이탈</td></tr>
-          <tr><td>램프 합류</td><td>③ 올림픽대로 김포 방향에서 반포대교 상층으로</td><td>램프 차량과 본선 차량 (보행화 뒤 수요가 몰리는 곳)</td></tr>
+          <tr><td>램프 합류</td><td>③ 올림픽대로 김포 방향에서 반포대교 상층으로</td><td>램프 차량과 본선 차량 (통제 뒤 수요가 몰리는 곳)</td></tr>
           <tr><td>회전교차로</td><td>잠수교 남단 (반시계 1차로, 4방향)과 우회로 3개</td><td>회전 중인 차에 양보한 뒤 진입</td></tr>
           <tr><td>엮임 (weaving)</td><td>올림픽대로 김포 방향 260 m (루프 합류 뒤 주차장 진출)</td><td>엇갈리는 차로 변경</td></tr>
           <tr><td>버스전용차로와 정류소</td><td>신반포로 중앙 버스전용차로, 정류소 6곳</td><td>정차한 버스 피하기</td></tr>
@@ -182,87 +202,216 @@ footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
   </div>
 </section>
 
-<!-- 3. 교통 -->
+<!-- 02 교통과 시나리오 -->
 <section id="traffic">
   <div class="wrap">
-    <h2><span class="num">03</span>교통</h2>
-    <p class="sub">수요와 신호, 버스는 모두 실측 자료로 넣었다. 원자료와 계산은 <a href="https://github.com/skku-aicad-2026-team12/banpo-av/tree/main/environment/road/measured">environment/road/measured</a>에 있다.</p>
-    <div class="grid three">
-      <div class="card"><h3>수요</h3><p>통제 전은 TOPIS 교통량조사(2026년 9월), 통제 후는 t-data 실측(11/9~11)을 썼다. 시간대는 평일 11~15시 평균이다. 통제 후 반포대교 북행의 교통량은 시간당 2,736대에서 2,858대로 증가했다. 이는 통제 전 잠수교와 반포대교의 교통량을 합친 것보다는 적다.</p><p><b>출처가 다른 이유.</b> 통제 뒤 교통량은 TOPIS 월별 조사자료가 아직 나오지 않아, 최근 며칠 기록을 제공하는 t-data를 썼다. t-data는 최근 기록만 남아 있어 통제 전 교통량까지 t-data로 통일할 수는 없었다.</p></div>
-      <div class="card"><h3>신호 5곳</h3><p>C-ITS 신호제어기의 1초 간격 기록을 통제 전(10/21)과 통제 후(11/11) 평일로 분석했다. 신반포사거리와 북행 횡단보도, 반포대교남단은 주기 170초로 연동되고, 잠수교 쪽 2곳은 75초 주기였다가 통제 뒤 점멸로 바뀌었다.</p></div>
-      <div class="card"><h3>버스 34개 노선과 보행자</h3><p>범위 안 정류소 6곳을 지나는 노선을 공식 자료에서 모두 찾아 배차 간격과 정차를 그대로 넣었다. 740번과 405번은 통제 뒤 반포대교로 우회한다. 횡단보도 7곳에 보행자가 있다.</p></div>
-    </div>
-    <h3>시나리오와 AV 경로</h3>
-    <p>도로망은 하나이고, 통제 전과 후는 수요와 버스 경로, 잠수교 통행 여부만 다르다. 자율주행차는 반포대로나 올림픽대로, 신반포로에서 출발해 반포대교나 잠수교로 한강을 건넌다. 출발 차로는 무작위다.</p>
+    <h2><span class="num">02</span>교통과 시나리오</h2>
+    <p class="sub">원자료와 계산은 <a href="https://github.com/skku-aicad-2026-team12/banpo-av/tree/main/environment/road/measured">environment/road/measured</a>에 있다.</p>
+    <h3>현실 반영 요소</h3>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>경로</th><th>시나리오</th><th>길</th></tr></thead>
+        <thead><tr><th>요소</th><th>내용</th><th>자세히</th></tr></thead>
         <tbody>
-          <tr><td><code>goga-jamsu</code></td><td><span class="tag before">통제 전</span></td><td>고가 왼쪽 차로로 ① 지하차도에 들어가 회전교차로를 지나 잠수교로</td></tr>
-          <tr><td><code>oly-jamsu</code></td><td><span class="tag before">통제 전</span></td><td>올림픽대로에서 회전교차로를 지나 잠수교로</td></tr>
-          <tr><td><code>side-banpo</code></td><td><span class="tag after">통제 후</span></td><td>측도에서 신반포사거리 신호를 지나 합류한 뒤 ②, ③을 거쳐 반포대교로</td></tr>
-          <tr><td><code>goga-banpo</code></td><td><span class="tag after">통제 후</span></td><td>고가로 직진해 합류하고 ③ 램프 합류를 지나 반포대교로</td></tr>
-          <tr><td><code>sbr-banpo</code></td><td><span class="tag after">통제 후</span></td><td>신반포로에서 사거리 우회전 도로로 들어가 합류하고 ③을 지나 반포대교로</td></tr>
+          <tr><td class="nw"><b>수요</b></td><td>평일 낮 실측 교통량 (통제 전 TOPIS · 후 t-data)</td><td>통제 전은 TOPIS 교통량조사(2026년 9월), 통제 후는 t-data 실측(11/9~11)의 평일 11~15시 평균이다. 통제 후 반포대교 북행은 시간당 2,736대에서 2,858대로 늘었고, 이는 통제 전 잠수교와 반포대교의 교통량을 합친 것보다는 적다. <b>출처가 다른 이유:</b> 통제 뒤 교통량은 TOPIS 월별 조사자료가 아직 나오지 않아, 최근 며칠 기록을 제공하는 t-data를 썼다. t-data는 최근 기록만 남아 있어 통제 전 교통량까지 t-data로 통일할 수는 없었다.</td></tr>
+          <tr><td class="nw"><b>신호</b></td><td>C-ITS 신호 기록 5곳, 실제 주기 그대로</td><td>C-ITS 신호제어기의 1초 간격 기록을 통제 전(10/21)과 통제 후(11/11) 평일로 분석했다. 신반포사거리와 북행 횡단보도, 반포대교남단은 주기 170초로 연동되고, 잠수교 쪽 2곳은 75초 주기였다가 통제 뒤 점멸로 바뀌었다.</td></tr>
+          <tr><td class="nw"><b>버스</b></td><td>공식 노선 34개 · 배차 간격 · 정류소 6곳</td><td>범위 안 정류소 6곳을 지나는 노선을 공식 자료에서 모두 찾아 배차 간격과 정차를 그대로 넣었다. 740번과 405번은 통제 뒤 반포대교로 우회한다.</td></tr>
+          <tr><td class="nw"><b>보행자</b></td><td>횡단보도 7곳, 보행 신호에 맞춰 횡단</td><td>횡단보도마다 보행자가 보행 신호를 기다렸다가 건넌다.</td></tr>
+          <tr><td class="nw"><b>차량</b></td><td>Krauss · IDM · EIDM · ACC 4종 혼합</td><td>배경 차량은 수업 코드의 차량 모델 4종을 섞는다. 기다릴수록 과감하게 끼어드는 성향(impatience 0.5)을 줘서 회전교차로와 합류에서 교착이 생기지 않게 했다. 차종(대형차) 비율은 실측 자료가 없어 넣지 않았다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>AV 경로 5개</h3>
+    <p>도로망은 하나이고, 통제 전과 후는 수요와 버스 경로, 잠수교 통행 여부만 다르다. 출발지는 1 올림픽대로, 2 신반포로, 3 반포대로이고 출발 차로는 무작위다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>경로</th><th>시나리오</th><th class="num">출발지</th><th>길</th><th>상호작용</th></tr></thead>
+        <tbody>
+          <tr><td><code>goga-jamsu</code></td><td><span class="tag before">통제 전</span></td><td class="num">3</td><td>고가 → 지하차도 → 회전교차로 → 잠수교</td><td>지하차도 분기 차로 선택, 회전교차로 진입 양보</td></tr>
+          <tr><td><code>oly-jamsu</code></td><td><span class="tag before">통제 전</span></td><td class="num">1</td><td>올림픽대로 → 램프 → 회전교차로 → 잠수교</td><td>램프 엮임 구간 차로 변경, 회전교차로 진입 양보</td></tr>
+          <tr><td><code>side-banpo</code></td><td><span class="tag after">통제 후</span></td><td class="num">3</td><td>측도 → 신반포사거리 → 반포대교</td><td>신호 교차로 통과, 좌회전 전용 차로 피해 차로 선택, 합류 양보</td></tr>
+          <tr><td><code>goga-banpo</code></td><td><span class="tag after">통제 후</span></td><td class="num">3</td><td>고가 → 합류 → 반포대교</td><td>합류 + 차로 감소 구간 끼어들기, 양보</td></tr>
+          <tr><td><code>sbr-banpo</code></td><td><span class="tag after">통제 후</span></td><td class="num">2</td><td>신반포로 → 우회전 → 반포대교</td><td>짧은 거리 안 오른쪽 차로 변경, 우회전</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </section>
 
-<!-- 4. AV -->
+<!-- 03 AV 학습 -->
 <section id="av">
   <div class="wrap">
-    <h2><span class="num">04</span>자율주행차의 관측, 행동, 보상, 학습</h2>
+    <h2><span class="num">03</span>AV 학습</h2>
     <p class="sub">출발 차로를 무작위로 두고, 어느 차로로 갈지도 정책이 직접 고른다.</p>
-    <div class="grid two">
-      <div class="card">
-        <h3>관측 49차원</h3>
-        <p>수업 기본 31차원에 경로 4(분기 2곳의 방향과 거리), 내 차로의 진행 방향 4, 신호 3(색, 정지선까지 거리, 남은 시간), 경합 차량 4, 차로 제한속도 3을 더했다.</p>
-        <h3>행동</h3>
-        <p>가감속과 차로 변경(왼쪽, 유지, 오른쪽)을 함께 낸다. 속도 명령의 상한은 수업 원본과 같이 차의 최고속도뿐이고, 환경이 제한속도로 잘라 주지 않는다. 신호 대기 중 정차, 재출발 등의 행동도 AV가 직접 판단한다.</p>
-      </div>
-      <div class="card">
-        <h3>보상과 종료</h3>
-        <p>차로 제한속도에 가까울수록 속도 보상을 받고, 도착하면 보너스를 받는다. 제한속도를 넘으면 넘은 비율의 0.5배만큼 스텝마다 감점한다. 충돌, 신호 위반, 120초 넘는 비정상 정지는 큰 벌점과 함께 판이 끝나고, 앞차와 2초 안에 부딪힐 만큼 가까워지면 접근 감점을 받는다. 빨간불 대기는 정지 시간에서 뺀다.</p>
-        <p><b>신호 위반 기준.</b> AV가 정지선을 넘어 교차로에 들어선 순간 자기 진행 방향 신호가 빨간불이면 신호 위반이다. 황색에 들어선 것은 위반이 아니다.</p>
-      </div>
+    <h3>Observation (49)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>구성</th><th class="num">차원</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td>수업 원본</td><td class="num">31</td><td>내 속도, 주변 5개 차로의 앞뒤 차, 연결성, 밀도</td></tr>
+          <tr><td>경로</td><td class="num">4</td><td>다음 분기 2개의 방향과 거리</td></tr>
+          <tr><td>진행 방향</td><td class="num">4</td><td>내 차로가 분기에서 어느 쪽으로 가나</td></tr>
+          <tr><td>신호</td><td class="num">3</td><td>앞 신호 색, 정지선 거리, 남은 시간</td></tr>
+          <tr><td>경합 차량</td><td class="num">4</td><td>교차로와 합류에서 마주칠 차</td></tr>
+          <tr><td>제한속도</td><td class="num">3</td><td>지금 제한속도, 다음 제한속도와 거리</td></tr>
+        </tbody>
+      </table>
     </div>
-    <h3>학습 순서</h3>
+    <h3>Action</h3>
+    <p>가감속, 차로 변경 (왼쪽, 유지, 오른쪽). 속도 명령의 상한은 수업 원본과 같이 차의 최고속도뿐이고, 환경이 제한속도로 잘라 주지 않는다. 신호 대기 중 정차, 재출발 등의 행동도 AV가 직접 판단한다.</p>
+    <h3>Reward</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>항목</th><th>조건</th><th class="num">값</th></tr></thead>
+        <tbody>
+          <tr><td>속도</td><td>제한속도까지 빠를수록 (속도 / 제한속도, 최대 1)</td><td class="num">+0.1</td></tr>
+          <tr><td>과속</td><td>제한속도를 넘은 비율만큼 (10% 넘으면 −0.05)</td><td class="num">−0.5</td></tr>
+          <tr><td>근접</td><td>5 m/s 이상으로 앞차 6 m 안에 붙음</td><td class="num">−0.1</td></tr>
+          <tr><td>접근</td><td>같은 차로 앞차와 충돌까지 2초 미만</td><td class="num">−0.2</td></tr>
+          <tr><td>도착</td><td>목적지 도착</td><td class="num">+2</td></tr>
+          <tr><td>실패</td><td>충돌, 신호 위반, 120 s 정지, 경로 이탈</td><td class="num">−20</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>신호 위반 기준.</b> AV가 정지선을 넘어 교차로에 들어선 순간 자기 진행 방향 신호가 빨간불이면 신호 위반이다. 황색에 들어선 것은 위반이 아니다. 빨간불 대기는 120 s 정지 시간에서 뺀다.</p>
+    <h3>학습 방법</h3>
     <ol class="steps">
-      <li><strong>선생님 규칙 정책.</strong> 차로 변경, 신호 대비, 틈 만들기, 다음 제한속도에 맞춘 미리 감속을 하는 규칙 정책으로 시범 데이터의 정답을 만든다.</li>
-      <li><strong>BC와 DAgger.</strong> 시범으로 행동을 복제하고, 정책이 스스로 간 상태에도 흔들림 DAgger로 정답을 붙인다. 드문 감속 스텝에 가중치를 줘서 BC 중 가장 나은 모델을 얻었다.</li>
-      <li><strong>선생님 보정 PPO.</strong> 그냥 이어서 학습한 PPO는 감속을 풀어 충돌이 늘었다. 그래서 PPO 업데이트마다 그 rollout의 관측에 선생님 정답으로 BC를 한 번 더 해 감속을 붙잡았다.</li>
-      <li><strong>상한 없는 환경에서 이어서 학습.</strong> 처음에는 환경이 속도 명령을 제한속도로 잘랐는데, 이것을 빼고 과속 감점을 넣은 환경에서 같은 방식으로 이어서 학습했다. U5에서 36.8만 스텝(VA), 거기서 다시 26.2만 스텝(VA2)이다. 저장 모델들은 학습에 쓰지 않은 선별용 250판으로 비교했다.</li>
-      <li><strong>모델 평가.</strong> 선별에 사용되지 않은 시드 1,000판으로 한 번만 평가해 최종 모델을 정했다.</li>
+      <li><strong>규칙 기반 선생님.</strong> 관측만 보고 운전하는 규칙 운전자(IDM)로, 학습용 정답 행동을 만든다.</li>
+      <li><strong>모방학습 BC + DAgger.</strong> 선생님 시범을 모방하고, 흔들린 주행에는 선생님 정답을 다시 매긴다.</li>
+      <li><strong>모방학습 감속 가중치 BC.</strong> 신호와 합류 앞처럼 드문 감속 장면을 손실에서 무겁게 본다.</li>
+      <li><strong>강화학습 선생님 보정 PPO.</strong> 보상으로 학습하되, 업데이트마다 선생님 정답으로 BC를 한 번 더 한다.</li>
     </ol>
+    <p class="more"><b>상한 없는 환경에서 이어서 학습.</b> 처음에는 환경이 속도 명령을 제한속도로 잘랐다(U5). 이것을 빼고 과속 감점을 넣은 환경에서 같은 방식으로 이어서 학습했다. VA는 U5에서 36.8만 스텝을 학습했고, 선별에서 가장 좋은 저장 시점은 16.4만이다. VA2는 VA 학습 끝 모델에서 다시 이어서 학습했고, 26.2만 시점이 최종 모델이다.<br>
+    <b>모델 평가.</b> 저장 모델들은 선별용 250판으로 비교하고, 선별에 사용되지 않은 시드 1,000판으로 한 번만 평가해 최종 모델을 정했다.</p>
+    <h3>모델 변천 과정</h3>
+    <p>모델 59개를 만들었다. BC에서 시작해 PPO로 넘어갔고, 속도 상한이 있던 환경의 최종 모델 U5(도착 98.8%, 충돌 0.8%)에서 상한을 뺀 환경으로 VA, VA2를 이어서 학습해 VA2를 최종 모델로 정했다(도착 97.6%, 충돌 0.6%).</p>
+    <details>
+      <summary>모델 59개 전체 보기</summary>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th class="num">#</th><th>모델</th><th>종류</th><th class="num">평가 판</th><th class="num">도착</th><th class="num">충돌</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td>bc_1116</td><td>BC</td><td class="num">50</td><td class="num">28.0%</td><td class="num">72.0%</td></tr>
+            <tr><td class="num">2</td><td>bc_1116_cap5</td><td>BC</td><td class="num">50</td><td class="num">26.0%</td><td class="num">72.0%</td></tr>
+            <tr><td class="num">3</td><td>bc_1117_f0</td><td>BC</td><td class="num">150</td><td class="num">94.0%</td><td class="num">1.3%</td></tr>
+            <tr><td class="num">4</td><td>bc_1117_f1</td><td>BC</td><td class="num">1,000</td><td class="num">95.6%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">5</td><td>bc_1117_r0</td><td>BC</td><td class="num">150</td><td class="num">96.0%</td><td class="num">1.3%</td></tr>
+            <tr><td class="num">6</td><td>bc_1117_r1</td><td>BC</td><td class="num">150</td><td class="num">92.0%</td><td class="num">1.3%</td></tr>
+            <tr><td class="num">7</td><td>bc_1117_s0</td><td>BC</td><td class="num">150</td><td class="num">96.7%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">8</td><td>bc_1119_g0</td><td>BC</td><td class="num">150</td><td class="num">84.0%</td><td class="num">8.7%</td></tr>
+            <tr><td class="num">9</td><td>bc_1119_g1</td><td>BC</td><td class="num">150</td><td class="num">89.3%</td><td class="num">2.0%</td></tr>
+            <tr><td class="num">10</td><td>bc_1119_g2</td><td>BC</td><td class="num">996</td><td class="num">94.9%</td><td class="num">1.0%</td></tr>
+            <tr><td class="num">11</td><td>bc_1119_g2b10</td><td>BC</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="num">12</td><td>bc_1119_g2b4</td><td>BC</td><td class="num">996</td><td class="num">95.6%</td><td class="num">0.4%</td></tr>
+            <tr><td class="num">13</td><td>bc_1119_g2b4n</td><td>BC</td><td class="num">996</td><td class="num">95.5%</td><td class="num">0.7%</td></tr>
+            <tr><td class="num">14</td><td>bc_1119_g3</td><td>BC</td><td class="num">150</td><td class="num">88.0%</td><td class="num">0.7%</td></tr>
+            <tr><td class="num">15</td><td>bc_1119_g4</td><td>BC</td><td class="num">150</td><td class="num">85.3%</td><td class="num">1.3%</td></tr>
+            <tr><td class="num">16</td><td>bc_1119_h0</td><td>BC</td><td class="num">150</td><td class="num">87.3%</td><td class="num">6.7%</td></tr>
+            <tr><td class="num">17</td><td>bc_1119_i0</td><td>BC</td><td class="num">150</td><td class="num">85.3%</td><td class="num">6.7%</td></tr>
+            <tr><td class="num">18</td><td>bc_1119_i0s</td><td>BC</td><td class="num">50</td><td class="num">86.0%</td><td class="num">2.0%</td></tr>
+            <tr><td class="num">19</td><td>bc_1119_r8b4n</td><td>BC</td><td class="num">998</td><td class="num">98.1%</td><td class="num">0.9%</td></tr>
+            <tr><td class="num">20</td><td>bc_1119_r8b4n3</td><td>BC</td><td class="num">50</td><td class="num">100.0%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">21</td><td>bc_1119_r8b4nh2</td><td>BC</td><td class="num">196</td><td class="num">93.9%</td><td class="num">1.5%</td></tr>
+            <tr><td class="num">22</td><td>bc_1119_r8b4nh5</td><td>BC</td><td class="num">196</td><td class="num">92.3%</td><td class="num">1.5%</td></tr>
+            <tr><td class="num">23</td><td>rl_1117_A1</td><td>PPO</td><td class="num">150</td><td class="num">78.0%</td><td class="num">18.7%</td></tr>
+            <tr><td class="num">24</td><td>rl_1117_B1</td><td>PPO</td><td class="num">150</td><td class="num">87.3%</td><td class="num">10.7%</td></tr>
+            <tr><td class="num">25</td><td>rl_1117_C1</td><td>PPO</td><td class="num">150</td><td class="num">50.0%</td><td class="num">30.0%</td></tr>
+            <tr><td class="num">26</td><td>rl_1117_D1</td><td>PPO</td><td class="num">150</td><td class="num">88.7%</td><td class="num">3.3%</td></tr>
+            <tr><td class="num">27</td><td>rl_1118_E1</td><td>PPO</td><td class="num">1,000</td><td class="num">99.2%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">28</td><td>rl_1118_E2</td><td>PPO</td><td class="num">150</td><td class="num">88.0%</td><td class="num">12.0%</td></tr>
+            <tr><td class="num">29</td><td>rl_1118_F1 · 43.4만</td><td>PPO</td><td class="num">150</td><td class="num">96.7%</td><td class="num">0.7%</td></tr>
+            <tr class="hl"><td class="num">30</td><td>rl_1118_F2 · 33.6만 · 차로 유지 최종</td><td>PPO</td><td class="num">1,000</td><td class="num">99.3%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">31</td><td>rl_1118_G1</td><td>PPO</td><td class="num">1,000</td><td class="num">99.1%</td><td class="num">0.3%</td></tr>
+            <tr><td class="num">32</td><td>rl_1118_G2</td><td>PPO</td><td class="num">150</td><td class="num">96.7%</td><td class="num">3.3%</td></tr>
+            <tr><td class="num">33</td><td>rl_1118_H1 · 6.1만</td><td>PPO</td><td class="num">150</td><td class="num">100.0%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">34</td><td>rl_1118_H2 · 24.5만</td><td>PPO</td><td class="num">1,000</td><td class="num">99.6%</td><td class="num">0.1%</td></tr>
+            <tr><td class="num">35</td><td>rl_1118_J1 · 22.5만</td><td>PPO</td><td class="num">1,000</td><td class="num">98.7%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">36</td><td>rl_1118_J2 · 22.5만</td><td>PPO</td><td class="num">150</td><td class="num">97.3%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">37</td><td>rl_1118_J3</td><td>PPO</td><td class="num">150</td><td class="num">96.0%</td><td class="num">4.0%</td></tr>
+            <tr><td class="num">38</td><td>rl_1118_K1 · 45.0만</td><td>PPO</td><td class="num">150</td><td class="num">97.3%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">39</td><td>rl_1119_L1</td><td>PPO</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="num">40</td><td>rl_1119_L2</td><td>PPO</td><td class="num">996</td><td class="num">96.9%</td><td class="num">0.9%</td></tr>
+            <tr><td class="num">41</td><td>rl_1119_P1 · 22.9만</td><td>PPO</td><td class="num">996</td><td class="num">97.0%</td><td class="num">0.6%</td></tr>
+            <tr><td class="num">42</td><td>rl_1119_P2 · 20.5만</td><td>PPO</td><td class="num">996</td><td class="num">95.9%</td><td class="num">1.5%</td></tr>
+            <tr><td class="num">43</td><td>rl_1119_Q · 39.2만</td><td>PPO</td><td class="num">996</td><td class="num">96.1%</td><td class="num">1.5%</td></tr>
+            <tr><td class="num">44</td><td>rl_1119_R</td><td>PPO</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="num">45</td><td>rl_1119_S · 51.5만</td><td>PPO</td><td class="num">996</td><td class="num">97.9%</td><td class="num">1.1%</td></tr>
+            <tr><td class="num">46</td><td>rl_1119_T1 · 23.7만</td><td>PPO</td><td class="num">996</td><td class="num">98.5%</td><td class="num">1.0%</td></tr>
+            <tr><td class="num">47</td><td>rl_1119_T2 · 31.1만</td><td>PPO</td><td class="num">996</td><td class="num">98.4%</td><td class="num">0.8%</td></tr>
+            <tr><td class="num">48</td><td>rl_1119_T3 · 53.1만</td><td>PPO</td><td class="num">996</td><td class="num">98.0%</td><td class="num">1.4%</td></tr>
+            <tr><td class="num">49</td><td>rl_1119_T4</td><td>PPO</td><td class="num">996</td><td class="num">98.0%</td><td class="num">1.1%</td></tr>
+            <tr><td class="num">50</td><td>rl_1119_T5 · 11.4만</td><td>PPO</td><td class="num">996</td><td class="num">97.8%</td><td class="num">1.4%</td></tr>
+            <tr><td class="num">51</td><td>rl_1120_U1 · 19.6만</td><td>PPO</td><td class="num">996</td><td class="num">98.5%</td><td class="num">0.9%</td></tr>
+            <tr><td class="num">52</td><td>rl_1120_U2</td><td>PPO</td><td class="num">996</td><td class="num">97.3%</td><td class="num">1.3%</td></tr>
+            <tr><td class="num">53</td><td>rl_1120_U3 · 16.3만</td><td>PPO</td><td class="num">996</td><td class="num">98.5%</td><td class="num">0.6%</td></tr>
+            <tr><td class="num">54</td><td>rl_1120_U4 · 34.3만</td><td>PPO</td><td class="num">996</td><td class="num">98.6%</td><td class="num">0.6%</td></tr>
+            <tr class="hl"><td class="num">55</td><td>rl_1120_U5 · 26.2만 · 상한 환경 최종</td><td>PPO</td><td class="num">1,000</td><td class="num">98.8%</td><td class="num">0.8%</td></tr>
+            <tr><td class="num">56</td><td>rl_1120_U5avg</td><td>PPO</td><td class="num">200</td><td class="num">98.5%</td><td class="num">0.0%</td></tr>
+            <tr><td class="num">57</td><td>rl_1124_VA · 16.4만</td><td>PPO</td><td class="num">250</td><td class="num">99.2%</td><td class="num">0.8%</td></tr>
+            <tr><td class="num">58</td><td>rl_1124_VB · 31.1만</td><td>PPO</td><td class="num">250</td><td class="num">97.6%</td><td class="num">0.8%</td></tr>
+            <tr class="hl"><td class="num">59</td><td>rl_1125_VA2 · 26.2만 · 최종</td><td>PPO</td><td class="num">1,000</td><td class="num">97.6%</td><td class="num">0.6%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="more">학습마다 가장 많은 판, 가장 좋은 저장 시점 기준이다. 판 수와 경로가 달라 줄끼리 직접 비교하지 않는다.</p>
+    </details>
   </div>
 </section>
 
-<!-- 5. 결과 -->
+<!-- 04 주행 결과 -->
 <section id="results">
   <div class="wrap">
-    <h2><span class="num">05</span>결과</h2>
+    <h2><span class="num">04</span>주행 결과</h2>
     <p class="sub">최종 모델 <code>results/team_rl_1125_VA2/model_261632.pt</code>를 새 시드 1,000판(5개 경로 × 200판, 판 800~999)에서 출발 차로를 무작위로, 안전장치 없이 평가했다. 전체 결과는 <a href="https://github.com/skku-aicad-2026-team12/banpo-av/blob/main/evaluation/eval/final_VA2_261632/report.md">최종 평가 보고서</a>에 있다.</p>
-    <div class="grid three">
-      <div class="card"><div class="stat">도착률 97.6%</div><div class="stat-label">1,000판 중 976판 도착</div></div>
-      <div class="card"><div class="stat">충돌률 0.6%</div><div class="stat-label">95% 구간 0.3~1.3%</div></div>
-      <div class="card"><div class="stat"><span class="nw">1,000판 중</span> <span class="nw">24판 실패</span></div><div class="stat-label">충돌 6, 신호 위반 13, 시간초과 5</div></div>
+    <div class="grid stats">
+      <div class="card"><div class="stat-label">Collision Rate</div><div class="stat">0.6%</div><div class="stat-label">95% 구간 0.3~1.3%</div></div>
+      <div class="card"><div class="stat-label">목적지 도착</div><div class="stat">97.6%</div><div class="stat-label">1,000판 중 976판</div></div>
+      <div class="card"><div class="stat-label">정지 · 이탈 · 순간이동</div><div class="stat">0</div><div class="stat-label">비정상 정지, 경로 이탈, 순간이동</div></div>
+      <div class="card"><div class="stat-label">평균 Reward</div><div class="stat">24.01</div><div class="stat-label">1,000판 평균 리턴</div></div>
     </div>
+    <p>실패는 1,000판 중 24판이다. 충돌 6, 신호 위반 13, 시간초과 5이고 오류는 0이다.</p>
     <h3>경로별</h3>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>경로</th><th class="num">도착</th><th class="nw">실패</th><th class="num">주행 시간 (s)</th><th class="num">SUMO 운전자 (s)</th><th class="num">앞차 최소 간격 (m)</th><th class="num">SUMO 운전자 (m)</th></tr></thead>
+        <thead><tr><th>경로 (각 200판)</th><th class="num">도착</th><th class="num">충돌률</th><th class="num">신호 위반</th><th class="num">시간초과</th><th class="num">순간이동 · 오류</th></tr></thead>
         <tbody>
-          <tr><td><span class="tag before">통제 전</span><code>goga-jamsu</code></td><td class="num">97.5%</td><td><span class="nw">신호 위반 5</span></td><td class="num">224.6</td><td class="num">216.0</td><td class="num">14.5</td><td class="num">8.5</td></tr>
-          <tr><td><span class="tag before">통제 전</span><code>oly-jamsu</code></td><td class="num">94%</td><td><span class="nw">충돌 5,</span> <span class="nw">신호 위반 7</span></td><td class="num">251.9</td><td class="num">236.1</td><td class="num">13.0</td><td class="num">8.9</td></tr>
-          <tr><td><span class="tag after">통제 후</span><code>side-banpo</code></td><td class="num">96.5%</td><td><span class="nw">충돌 1,</span> <span class="nw">신호 위반 1,</span> <span class="nw">시간초과 5</span></td><td class="num">305.5</td><td class="num">253.5</td><td class="num">11.8</td><td class="num">6.7</td></tr>
-          <tr><td><span class="tag after">통제 후</span><code>goga-banpo</code></td><td class="num">100%</td><td>없음</td><td class="num">128.2</td><td class="num">124.5</td><td class="num">11.9</td><td class="num">7.5</td></tr>
-          <tr><td><span class="tag after">통제 후</span><code>sbr-banpo</code></td><td class="num">100%</td><td>없음</td><td class="num">136.5</td><td class="num">125.2</td><td class="num">12.4</td><td class="num">7.5</td></tr>
+          <tr><td><span class="tag before">통제 전</span><code>goga-jamsu</code></td><td class="num">97.5%</td><td class="num">0.0%</td><td class="num">5</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr><td><span class="tag before">통제 전</span><code>oly-jamsu</code></td><td class="num">94.0%</td><td class="num">2.5%</td><td class="num">7</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr><td><span class="tag after">통제 후</span><code>side-banpo</code></td><td class="num">96.5%</td><td class="num">0.5%</td><td class="num">1</td><td class="num">5</td><td class="num">0</td></tr>
+          <tr><td><span class="tag after">통제 후</span><code>goga-banpo</code></td><td class="num">100%</td><td class="num">0.0%</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr><td><span class="tag after">통제 후</span><code>sbr-banpo</code></td><td class="num">100%</td><td class="num">0.0%</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr class="hl"><td><b>합계 (1,000판)</b></td><td class="num"><b>97.6%</b></td><td class="num"><b>0.6%</b></td><td class="num"><b>13</b></td><td class="num"><b>5</b></td><td class="num"><b>0</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3 id="videos">주행 영상</h3>
+    <p>최종 모델로 경로마다 가장 어려운 출발 차로에서 상호작용이 많은 판을 골랐다. 모두 3배속이고 도착 장면까지 담았다.</p>
+    <div class="grid two">
+      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/xawf5CkwW48" title="고가에서 잠수교로 (goga-jamsu)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        <figcaption><span class="tag before">통제 전</span><b>고가에서 잠수교로</b> (<code>goga-jamsu</code>, 판 0). 맨 오른쪽 차로에서 출발해 580 m 안에 왼쪽 끝 차로까지 다섯 번 옮겨 지하차도로 들어간다.</figcaption></figure>
+      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/uz9RgG4wKdQ" title="올림픽대로에서 잠수교로 (oly-jamsu)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        <figcaption><span class="tag before">통제 전</span><b>올림픽대로에서 잠수교로</b> (<code>oly-jamsu</code>, 판 39). 회전교차로에서 먼저 돌고 있는 차에 양보한 뒤 들어간다.</figcaption></figure>
+      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/oP7Hghs4FS8" title="측도에서 반포대교로 (side-banpo)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        <figcaption><span class="tag after">통제 후</span><b>측도에서 반포대교로</b> (<code>side-banpo</code>, 판 6). 신반포사거리 신호를 기다린 뒤 옆 차로 차들과 나란히 합류 구간을 지난다.</figcaption></figure>
+      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/GL5udXWay8c" title="고가에서 반포대교로 (goga-banpo)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        <figcaption><span class="tag after">통제 후</span><b>고가에서 반포대교로</b> (<code>goga-banpo</code>, 판 37). 차로를 네 번 옮겨 ③ 램프 합류 앞에서 반포대교 쪽 차로에 들어선다.</figcaption></figure>
+      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/saTAr4_Oelo" title="신반포로에서 반포대교로 (sbr-banpo)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        <figcaption><span class="tag after">통제 후</span><b>신반포로에서 반포대교로</b> (<code>sbr-banpo</code>, 판 31). 우회전 도로에서 본선으로 합류할 때 본선 차에 양보한다.</figcaption></figure>
+    </div>
+    <h3>SUMO 기본 운전자와 비교</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>경로</th><th class="num">주행 시간 (s)</th><th class="num">SUMO 운전자 (s)</th><th class="num">앞차 최소 간격 (m)</th><th class="num">SUMO 운전자 (m)</th></tr></thead>
+        <tbody>
+          <tr><td><code>goga-jamsu</code></td><td class="num">224.6</td><td class="num">216.0</td><td class="num">14.5</td><td class="num">8.5</td></tr>
+          <tr><td><code>oly-jamsu</code></td><td class="num">251.9</td><td class="num">236.1</td><td class="num">13.0</td><td class="num">8.9</td></tr>
+          <tr><td><code>side-banpo</code></td><td class="num">305.5</td><td class="num">253.5</td><td class="num">11.8</td><td class="num">6.7</td></tr>
+          <tr><td><code>goga-banpo</code></td><td class="num">128.2</td><td class="num">124.5</td><td class="num">11.9</td><td class="num">7.5</td></tr>
+          <tr><td><code>sbr-banpo</code></td><td class="num">136.5</td><td class="num">125.2</td><td class="num">12.4</td><td class="num">7.5</td></tr>
         </tbody>
       </table>
     </div>
     <p>주행 시간과 간격은 도착한 판의 평균이다. 비교 대상은 같은 출발 조건에서 SUMO 기본 운전자 모델이 같은 경로를 달린 값이다.<br>
-    학습한 차는 앞차와 간격을 4~5 m 더 두고, 그만큼 조금 늦게 도착한다.<br>
+    학습한 차는 앞차와 간격을 4~6 m 더 두고, 그만큼 조금 늦게 도착한다.<br>
     측도에서 출발하는 <code>side-banpo</code>는 신반포사거리 빨간불에서 평균 88초를 기다려서 차이가 가장 크다.</p>
     <h3>과속</h3>
     <p>과속은 합격 기준으로 삼지 않고, 넘은 폭별로 그대로 공개한다.<br>
@@ -286,36 +435,40 @@ footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
   </div>
 </section>
 
-<!-- 6. 영상 -->
-<section id="videos">
-  <div class="wrap">
-    <h2><span class="num">06</span>주행 영상</h2>
-    <p class="sub">최종 모델로 경로마다 가장 어려운 출발 차로에서 상호작용이 많은 판을 골랐다. 모두 3배속이고 도착 장면까지 담았다.</p>
-    <div class="grid two">
-      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/xawf5CkwW48" title="고가에서 잠수교로 (goga-jamsu)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-        <figcaption><span class="tag before">통제 전</span><b>고가에서 잠수교로</b> (<code>goga-jamsu</code>, 판 0). 맨 오른쪽 차로에서 출발해 580 m 안에 왼쪽 끝 차로까지 다섯 번 옮겨 지하차도로 들어간다.</figcaption></figure>
-      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/uz9RgG4wKdQ" title="올림픽대로에서 잠수교로 (oly-jamsu)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-        <figcaption><span class="tag before">통제 전</span><b>올림픽대로에서 잠수교로</b> (<code>oly-jamsu</code>, 판 39). 회전교차로에서 먼저 돌고 있는 차에 양보한 뒤 들어간다.</figcaption></figure>
-      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/oP7Hghs4FS8" title="측도에서 반포대교로 (side-banpo)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-        <figcaption><span class="tag after">통제 후</span><b>측도에서 반포대교로</b> (<code>side-banpo</code>, 판 6). 신반포사거리 신호를 기다린 뒤 옆 차로 차들과 나란히 합류 구간을 지난다.</figcaption></figure>
-      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/GL5udXWay8c" title="고가에서 반포대교로 (goga-banpo)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-        <figcaption><span class="tag after">통제 후</span><b>고가에서 반포대교로</b> (<code>goga-banpo</code>, 판 37). 차로를 네 번 옮겨 ③ 램프 합류 앞에서 반포대교 쪽 차로에 들어선다.</figcaption></figure>
-      <figure class="vid"><iframe src="https://www.youtube-nocookie.com/embed/saTAr4_Oelo" title="신반포로에서 반포대교로 (sbr-banpo)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
-        <figcaption><span class="tag after">통제 후</span><b>신반포로에서 반포대교로</b> (<code>sbr-banpo</code>, 판 31). 우회전 도로에서 본선으로 합류할 때 본선 차에 양보한다.</figcaption></figure>
-    </div>
-  </div>
-</section>
-
-<!-- 7. 데이터셋 -->
+<!-- 05 수집 데이터 -->
 <section id="dataset">
   <div class="wrap">
-    <h2><span class="num">07</span>데이터셋</h2>
+    <h2><span class="num">05</span>수집 데이터</h2>
     <p class="sub">최종 모델이 두 시나리오, 5개 경로를 달린 주행 기록이다. <a href="https://huggingface.co/datasets/skku-aicad-2026-team12/banpo-av-dataset-v2">Hugging Face에서 받기</a></p>
-    <div class="grid three">
-      <div class="card"><div class="stat">26,000판</div><div class="stat-label">10,844,678행, 결측(NaN) 0, 건너뛴 판 0, 중복 궤적 0</div></div>
-      <div class="card"><div class="stat">도착률 97.60%</div><div class="stat-label">25,375판 도착. 충돌 190(0.73%), 신호 위반 300, 시간초과 115, 정지 20</div></div>
-      <div class="card"><div class="stat">136.6 GB</div><div class="stat-label">JSONL.gz 26개(135.5 GB)와 학습용 NPZ 26개(1.1 GB), 1,000판씩 26묶음</div></div>
+    <h3>① 항목</h3>
+    <p>수업 기본 19칼럼은 그대로 두고, 기존 칼럼으로 계산되지 않는 값 6개만 추가했다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>칼럼</th><th>단위 · 형식</th><th>의미</th><th>필요한 이유</th></tr></thead>
+        <tbody>
+          <tr><td><code>sim_time</code></td><td>s</td><td>관측 시점의 시뮬레이션 시각</td><td>신호 5곳이 고정 주기라 이 값으로 모든 신호 상태를 복원</td></tr>
+          <tr><td><code>ego_route</code></td><td>정수 0–4</td><td>AV 경로 (5개 중 하나)</td><td>같은 도로에서 출발하는 경로가 있어 분기 전엔 목적지를 알 수 없음</td></tr>
+          <tr><td><code>end_reason</code></td><td>정수 0–8 (판 마지막 행)</td><td>판이 끝난 이유</td><td>정지, 경로 이탈, 순간이동, 신호 위반 구분</td></tr>
+          <tr><td><code>signal_tls</code></td><td>정수 (없음 −1)</td><td>AV가 다음에 만날 신호</td><td>state와 observation에 신호가 없음</td></tr>
+          <tr><td><code>signal_state</code></td><td>녹 1 · 황 0.5 · 적 0 · 없음 −1</td><td>그 신호의 지금 색</td><td>위와 같은 요구</td></tr>
+          <tr><td><code>signal_remaining_s</code></td><td>s (없으면 빈 값)</td><td>그 색이 바뀔 때까지 남은 시간</td><td>실제 초 단위 값</td></tr>
+        </tbody>
+      </table>
     </div>
+    <h3>② 규모 · 조건</h3>
+    <div class="grid stats">
+      <div class="card"><div class="stat-label">행 (transition)</div><div class="stat">1,084만</div></div>
+      <div class="card"><div class="stat-label">판</div><div class="stat">26,000</div></div>
+      <div class="card"><div class="stat-label">용량</div><div class="stat">137 GB</div></div>
+      <div class="card"><div class="stat-label">목적지 도착</div><div class="stat">97.6%</div></div>
+      <div class="card"><div class="stat-label">충돌</div><div class="stat">0.73%</div></div>
+    </div>
+    <ul>
+      <li><b>수집 조건.</b> 최종 모델 단독 주행, 안전장치 끔, 무작위 출발 차로, 5경로 무작위, 실측 수요 100%</li>
+      <li><b>시드.</b> 판마다 SUMO 시드 직접 지정 → 26,000판 전부 다른 교통 (중복 0 검증)</li>
+      <li><b>저장 구조.</b> 묶음마다 JSONL.gz (수업 형식, <code>next_*</code>는 판 마지막 행만) + NPZ (학습용 배열)</li>
+    </ul>
+    <p class="more">정확한 값은 10,844,678행, 136.6 GB(JSONL.gz 26개 135.5 GB, NPZ 26개 1.1 GB)다. 도착 25,375판, 충돌 190판(0.73%), 신호 위반 300판, 시간초과 115판, 정지 20판이다. 관측 결측(NaN) 0, 건너뛴 판 0, 중복 궤적 0이다. 한 행은 한 스텝(0.5초)이다.</p>
     <h3>경로별</h3>
     <div class="table-wrap">
       <table>
@@ -329,14 +482,33 @@ footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
         </tbody>
       </table>
     </div>
-    <p>한 행은 한 스텝(0.5초)이다. 수업 기본 칼럼(관측 49차원, 행동, 보상, 다음 관측, 종료 여부)에 <code>sim_time</code>, <code>ego_route</code>, <code>signal_tls</code>, <code>signal_state</code>, <code>signal_remaining_s</code>, <code>end_reason</code>을 더했다. 출발 차로는 무작위다. 과속 스텝은 1.829%이고 1 km/h 넘게 초과한 스텝은 0.458%다. 칼럼별 형태와 단위는 <a href="https://huggingface.co/datasets/skku-aicad-2026-team12/banpo-av-dataset-v2">데이터셋 카드</a>에 있다.</p>
   </div>
 </section>
 
-<!-- 8. 실행법 -->
+<!-- 06 문제와 해결 -->
+<section id="problems">
+  <div class="wrap">
+    <h2><span class="num">06</span>문제와 해결</h2>
+    <p class="sub">만들고 학습하면서 발견한 문제와 해결 과정이다.</p>
+    <div class="table-wrap">
+      <table class="problems">
+        <thead><tr><th>문제</th><th>원인</th><th>해결</th><th>결과</th></tr></thead>
+        <tbody>
+          <tr><td><b>몇 시간 뒤 회전교차로 교착</b></td><td>램프 차량이 회전 차량에 끝없이 양보 → 대기열이 고리를 막아 순간이동 발생</td><td>배경차 impatience 0.5 (기다릴수록 과감히 진입)</td><td><span class="nw">4시간 교착 0,</span> 잠수교 북행 <span class="nw">−34% → −2.5%</span></td></tr>
+          <tr><td><b>차로만 유지하는 AV가 14초 만에 "도착"</b></td><td>SUMO는 충돌로 사라진 차도 도착 목록에 넣음</td><td>도착 = 충돌 없이 경로 끝에서 사라짐, 실패는 원인별로 따로 판정 (<code>end_reason</code>)</td><td>도착 · 충돌 수치를 믿을 수 있게</td></tr>
+          <tr><td><b>수집이 초당 1~2 스텝, 10⁷개에 수 일</b></td><td>수업 코드는 매 스텝 차량 약 450대의 값을 한 대씩 SUMO에 물어봄 (스텝당 약 3,000번 통신) — 시간의 89%</td><td>구독: 처음 한 번 등록하면 매 스텝 전체 값을 한 번에 받음. libsumo: SUMO를 파이썬 안에서 직접 불러 통신 자체를 없앰</td><td><span class="nw">212 s → 11 s</span> <span class="nw">(약 19배),</span> 데이터 바이트 단위 동일</td></tr>
+          <tr><td><b>BC가 신호 대기 줄에서 계속 추돌</b></td><td>시범 운전자(SUMO)가 앞차 뒤 정확히 2.50 m(충돌 판정 경계)에 서고, 관측에 없는 정보로 운전</td><td>관측만 보는 규칙 운전자(IDM)를 선생님으로 교체</td><td>BC 도착 <span class="nw">26% → 96%</span></td></tr>
+          <tr><td><b>PPO를 돌릴수록 도착률 하락</b></td><td>실패 벌점(5)이 작아 도착 88.7% 모델의 리턴이 96% 모델보다 큼</td><td>실패 벌점 5 → 20</td><td>리턴 순위 = 평가 순위</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 부록: 실행법 -->
 <section id="usage">
   <div class="wrap">
-    <h2><span class="num">08</span>실행법</h2>
+    <h2><span class="num">부록</span>실행법</h2>
     <p class="sub">Python 3.14 (3.11에서도 동작)과 SUMO 1.27.1이 필요하다. 명령은 저장소 루트에서 실행한다. 자세한 것은 <a href="https://github.com/skku-aicad-2026-team12/banpo-av#readme">README</a>에 있다.</p>
 <pre><code>git clone https://github.com/skku-aicad-2026-team12/banpo-av.git
 cd banpo-av
@@ -356,12 +528,12 @@ python -X utf8 data_collection/collect_pomdp_data.py --model results/team_rl_112
   </div>
 </section>
 
-<!-- 9. 한계 -->
+<!-- 부록: 한계 -->
 <section id="limits">
   <div class="wrap">
-    <h2><span class="num">09</span>한계</h2>
+    <h2><span class="num">부록</span>한계</h2>
     <ul>
-      <li>이전 모델(U5)의 실패 판을 같은 시드로 규칙 정책(선생님)에게 돌려 보니 선생님도 대부분 실패했다. 녹색 끝 무렵 정지선 앞에서 늦게 감속하는 경우가 가장 많았고, 좌회전 전용 차로에 갇히거나 회전교차로에서 틈을 못 찾는 판도 있었다. 최종 모델(VA2)의 평가 1,000판에서는 선생님과 모델이 둘 다 실패한 판이 2판(<code>side-banpo</code> 시간초과 1판, <code>oly-jamsu</code> 1판)이다.</li>
+      <li>이전 모델(U5)의 실패 판을 같은 시드로 규칙 정책(선생님)에게 돌려 보니 선생님도 대부분 실패했다. 녹색 끝 무렵 정지선 앞에서 늦게 감속하는 경우가 가장 많았고, 좌회전 전용 차로에 갇히거나 회전교차로에서 틈을 못 찾는 판도 있었다. 최종 모델(VA2)의 평가 1,000판에서는 선생님과 모델이 둘 다 실패한 판이 2판(<code>side-banpo</code> 판 868은 둘 다 시간초과, <code>oly-jamsu</code> 판 891은 선생님은 멈춰 서고 모델은 신호 위반)이다.</li>
       <li><code>oly-jamsu</code>는 도착률이 94%로 가장 낮다. 실패 12판 중 충돌이 5판, 신호 위반이 7판이다.</li>
       <li>가장 크게 넘은 과속(약 10 km/h)은 회전교차로 안쪽 차로나 제한속도가 낮아지는 지점 바로 뒤에서 나온다. 관측의 "다음 제한속도"가 교차로 안쪽 차로를 보지 못하기 때문이다.</li>
       <li>신반포로에서 반포대교로 가는 경로는 2번 차로 출발을 뺐다. 그 차로에서는 규칙 정책도 길을 찾지 못하고 선다.</li>
@@ -370,10 +542,10 @@ python -X utf8 data_collection/collect_pomdp_data.py --model results/team_rl_112
   </div>
 </section>
 
-<!-- 10. 발표자료 -->
+<!-- 부록: 발표자료 -->
 <section id="slides">
   <div class="wrap">
-    <h2><span class="num">10</span>발표자료</h2>
+    <h2><span class="num">부록</span>발표자료</h2>
     <p>최종발표 자료(16쪽). <a href="https://drive.google.com/file/d/1QvCuYaPnv4GxPrF2CouUzCrBJJRM5HHv/view">PDF 보기 (Google Drive)</a>.</p>
   </div>
 </section>
