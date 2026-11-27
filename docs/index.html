@@ -111,6 +111,7 @@ nav.toc .toc-sep { flex: none; width: 1px; align-self: stretch; background: var(
 nav.toc a.appx { color: var(--muted); }
 h3[id] { scroll-margin-top: 64px; }
 @media (max-width: 720px) { .table-wrap table { min-width: 620px; } .table-wrap table.problems { min-width: 760px; } .table-wrap { -webkit-overflow-scrolling: touch; } }
+@media (max-width: 720px) { .table-wrap table.factors { min-width: 820px; } .table-wrap table.cols { min-width: 780px; } table.factors td:nth-child(2) { min-width: 300px; } table.cols td:nth-child(2) { min-width: 270px; } }
 .theme-toggle { position: fixed; right: 16px; bottom: 16px; z-index: 10; border: 1px solid var(--line); background: var(--bg-soft); color: var(--text); border-radius: 999px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
 </style>
 </head>
@@ -209,7 +210,7 @@ h3[id] { scroll-margin-top: 64px; }
     <p class="sub">원자료와 계산: <a href="https://github.com/skku-aicad-2026-team12/banpo-av/tree/main/environment/road/measured">environment/road/measured</a></p>
     <h3>현실 반영 요소</h3>
     <div class="table-wrap">
-      <table>
+      <table class="factors">
         <thead><tr><th>요소</th><th>내용</th><th>자세히</th></tr></thead>
         <tbody>
           <tr><td class="nw"><b>수요</b></td><td>평일 낮 실측 교통량 (통제 전 TOPIS · 후 t-data)</td><td>통제 전은 TOPIS 교통량조사(2026년 9월), 통제 후는 t-data 실측(11/9~11)의 평일 11~15시 평균. 통제 후 반포대교 북행은 시간당 2,736대 → 2,858대로 증가, 통제 전 잠수교 + 반포대교 교통량 합보다는 적은 수준. <b>출처가 다른 이유:</b> TOPIS 월별 조사자료는 통제 전 기간까지만 공개되어 통제 후는 최근 며칠 기록을 주는 t-data 사용. t-data는 최근 기록만 보관하므로 통제 전은 TOPIS 사용.</td></tr>
@@ -455,7 +456,7 @@ h3[id] { scroll-margin-top: 64px; }
     <h3>① 항목</h3>
     <p>수업 기본 19칼럼 전부 유지 + 기존 칼럼에 없는 정보 6개 추가.</p>
     <div class="table-wrap">
-      <table>
+      <table class="cols">
         <thead><tr><th>칼럼</th><th>단위 · 형식</th><th>의미</th><th>필요한 이유</th></tr></thead>
         <tbody>
           <tr><td><code>sim_time</code></td><td>s</td><td>관측 시점의 시뮬레이션 시각</td><td>신호 5곳이 고정 주기라 이 값으로 모든 신호 상태를 복원</td></tr>
