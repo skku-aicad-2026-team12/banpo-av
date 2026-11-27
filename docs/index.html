@@ -220,6 +220,18 @@ h3[id] { scroll-margin-top: 64px; }
         </tbody>
       </table>
     </div>
+    <h3>배경 교통 검증</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>항목</th><th>값</th></tr></thead>
+        <tbody>
+          <tr><td>도로 위 동시 차량</td><td>약 450대 (전부 state에 기록)</td></tr>
+          <tr><td>투입량</td><td>30분에 통제 전 9,600대 · 통제 후 9,560대, 실측 수요 100%</td></tr>
+          <tr><td>실측과의 차이</td><td>측정 링크 통과량 실측 대비 −10% 이내 (잠수교 북행 −2.5%), 반포대교 북행 속도 모델 49 · 실측 47 km/h</td></tr>
+          <tr><td>장시간 안정성</td><td>4시간 × 시드 3 × 두 시나리오, 배경 교통 순간이동 0 · 충돌 0</td></tr>
+        </tbody>
+      </table>
+    </div>
     <h3>AV 경로 5개</h3>
     <p>도로망은 하나. 통제 전 · 후의 차이는 수요, 버스 경로, 잠수교 통행 여부. 출발지는 1 올림픽대로, 2 신반포로, 3 반포대로, 출발 차로는 무작위.</p>
     <div class="table-wrap">
@@ -517,6 +529,12 @@ python -m pip install -r requirements.txt
 # 도로망 생성과 검증
 python -X utf8 environment/road/build_net.py
 python -X utf8 environment/road/check_net.py        # 마지막 줄 "결과: 통과"
+
+# 학습: BC → 선생님 보정 PPO (최종 모델 VA2의 전체 설정은 results/team_rl_1125_VA2/args.json)
+python -X utf8 training/train_team.py bc --data &lt;시범 데이터&gt;/*.npz --epochs 30
+python -X utf8 training/train_team.py rl --init results/team_bc_&lt;시각&gt;/model.pt --envs 7 --teacher-lr 2e-4 \
+  --depart-lane random --depart-speed limit
+# 이어서 학습할 때는 --init에 이전 PPO 모델 (VA2는 --init results/team_rl_1124_VA/model.pt)
 
 # 최종 모델 평가 (5개 경로 × 200판)
 python -X utf8 evaluation/baseline.py --model results/team_rl_1125_VA2/model_261632.pt \
